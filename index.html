@@ -88,7 +88,7 @@
   /* checkable rows */
   .chk{display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-top:1px solid var(--line);cursor:pointer}
   .chk:first-of-type{border-top:none;padding-top:2px}
-  .box{flex:none;width:22px;height:22px;border-radius:7px;border:1.5px solid #33405147;border-color:#334051;margin-top:2px;
+  .box{flex:none;width:22px;height:22px;border-radius:7px;border:1.5px solid #334051;margin-top:2px;
     display:flex;align-items:center;justify-content:center;font-size:13px;color:#0a0d12;transition:all .15s}
   .chk.on .box{background:var(--acc);border-color:var(--acc)}
   .chk.on .box::after{content:"✓";font-weight:800}
@@ -122,6 +122,34 @@
   .stat .v{font-weight:800;font-size:17px}
   .stat .k{font-size:11px;color:var(--mut);margin-top:2px}
 
+  /* weigh-in input */
+  .winput{display:flex;gap:8px;align-items:center;margin-top:8px}
+  .winput input{
+    flex:1;max-width:110px;background:var(--card2);border:1px solid var(--line);border-radius:10px;
+    color:var(--text);font-size:16px;font-weight:700;padding:8px 10px;text-align:center;
+    font-variant-numeric:tabular-nums;-webkit-appearance:none;appearance:none;
+  }
+  .winput input:focus{outline:none;border-color:var(--acc)}
+  .winput .unit{color:var(--dim);font-size:13px;font-weight:700}
+  .winput button{
+    border:none;background:var(--acc);color:#0a0d12;font-weight:800;font-size:13px;
+    padding:9px 14px;border-radius:10px;cursor:pointer;
+  }
+  .wlogged{font-size:12.5px;color:var(--acc);font-weight:700;margin-top:6px}
+
+  /* weight view */
+  .wstatgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+  .chartbox{margin-top:12px}
+  .chartbox svg{width:100%;height:auto;display:block}
+  .wrowline{display:flex;align-items:center;gap:10px;padding:11px 0;border-top:1px solid var(--line)}
+  .wrowline:first-of-type{border-top:none}
+  .wrowline .wd{flex:1;font-size:13.5px;color:var(--mut)}
+  .wrowline .wv{font-weight:800;font-size:15px;font-variant-numeric:tabular-nums}
+  .wrowline .wdelta{font-size:12px;font-weight:700;width:56px;text-align:right;font-variant-numeric:tabular-nums}
+  .wrowline .wdel{border:none;background:none;color:var(--dim);font-size:15px;padding:4px 2px 4px 10px;cursor:pointer}
+  .down{color:var(--acc)} .up{color:var(--amber)} .flat{color:var(--dim)}
+  .empty{color:var(--dim);font-size:13.5px;text-align:center;padding:22px 8px;line-height:1.6}
+
   /* tabs */
   nav{
     position:fixed;left:0;right:0;bottom:0;z-index:60;
@@ -147,11 +175,9 @@
   .nowtag{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.06em;background:var(--acc);color:#0a0d12;padding:2px 7px;border-radius:6px;margin-left:7px;vertical-align:1px}
 
   .bigday{font-size:26px;font-weight:800;letter-spacing:-.01em}
-  .countnum{font-size:44px;font-weight:800;color:var(--acc);line-height:1.1}
   .center{text-align:center;padding:26px 16px}
 
   .hide{display:none}
-  h4.sec{font-size:13px;font-weight:800;margin:14px 0 4px;color:var(--text)}
 </style>
 </head>
 <body>
@@ -178,12 +204,14 @@
 
 <main class="wrap">
   <div id="todayView"></div>
+  <div id="weightView" class="hide"></div>
   <div id="planView" class="hide"></div>
 </main>
 
 <nav>
   <div class="navrow">
     <button id="tabToday" class="active"><span class="nic">◉</span>Today</button>
+    <button id="tabWeight"><span class="nic">↘</span>Weight</button>
     <button id="tabPlan"><span class="nic">☰</span>Full Plan</button>
   </div>
 </nav>
@@ -193,9 +221,10 @@
 
 /* ============ PROGRAM DATA ============ */
 
-const START = {y:2026, m:7, d:13};           // Mon 13 July 2026 (week 1, day 1)
-const EVENT = {y:2026, m:10, d:3};           // Sat 3 Oct 2026
-const TOTAL_DAYS = 84;                        // 12 weeks
+const START = {y:2026, m:7, d:9};            // commenced Thu 9 July 2026 (day 1)
+const DOCW0 = {y:2026, m:7, d:13};           // Mon 13 July — anchor for week numbering (week 1, Mon-aligned)
+const EVENTMON = {y:2026, m:9, d:28};        // Mon 28 Sep — event week begins
+const TOTAL_DAYS = 87;                        // Thu 9 Jul → Sat 3 Oct (event day)
 const DELOAD_WEEKS = [4, 8];
 const DOW = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
 const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -227,7 +256,7 @@ const SESSIONS = {
 };
 
 const PHASES = {
-  p1:{chip:"Phase 1 · Recomp", cls:"", title:"Phase 1 — Recomp", range:"Weeks 1–6 · Mon 13 Jul → Sun 23 Aug",
+  p1:{chip:"Phase 1 · Recomp", cls:"", title:"Phase 1 — Recomp", range:"Commenced Thu 9 Jul → Sun 23 Aug",
       water:"3.5–4 L", sodium:"Normal — salt food to taste",
       waterNote:"No restriction needed — the deficit is small this phase.",
       cardio:{2:"LISS · 25–30 min",4:"LISS · 25–30 min",0:"LISS · 25–30 min"}},
@@ -243,7 +272,7 @@ const PHASES = {
       water:"", sodium:"", waterNote:"", cardio:{}},
 };
 
-/* meals: [name, detail, kcal, P, C, F]. {carb} slots swap by phase. */
+/* meals: [name, detail, kcal, P, C, F] */
 function mealsFor(phase, training){
   const M1 = ["Meal 1 — Breakfast","250g Greek yoghurt (low-fat, plain) + 1 scoop whey + 150g frozen berries",345,50,30,3];
   const PT = ["Pre-Training Meal","<b>2 bananas + 2 slices sourdough</b> — eat 60–90 min before your session",470,13,104,2];
@@ -266,50 +295,107 @@ const TARGETS = {
   p3:{tr:"~2,200 kcal · 200g P · 180g C · 60g F", re:"~1,900 kcal · 200g P · 80g C · 65g F"},
 };
 
-/* Event week: keyed by day offset from event-week Monday (0 = Mon 28 Sep) */
+/* ---- Event week: full day-by-day plans, Mon (Day −5) → Sat (event day) ----
+   Depletion sessions = the normal A sessions at 70–80% load, reps pushed to 15–20.
+   Low days = Phase 2 rest-day meal amounts (per the program doc). */
+const depEx = n => SESSIONS[n].ex.map(([e,s]) => [e, s.split("×")[0].trim()+" × 15–20"]);
+const EW_M1 = ["Meal 1 — Breakfast","250g Greek yoghurt (low-fat, plain) + 1 scoop whey + 150g frozen berries",345,50,30,3];
+const EW_LOWM = [EW_M1,
+  ["Meal 2 — Lunch","200g chicken breast + <b>110g cooked rice</b> + veg",506,65,31,7],
+  ["Meal 3 — Afternoon","200g white fish + <b>150g cooked sweet potato</b> + veg",385,49,31,3],
+  ["Meal 4 — Dinner","180g chicken breast + 2 whole eggs + veg + <b>1.5 tbsp olive oil (21g)</b> + <b>30g almonds (~18 almonds)</b>",846,74,10,53]];
+
 const EVENT_WEEK = [
   { d:"Day −5", tag:"Deplete",
-    carbs:"Low — <b>~100g carbs</b> for the day. Use the Phase 2 rest-day meal amounts (110g rice at lunch, 150g sweet potato at Meal 3, 30g almonds at dinner) and keep all protein meals as normal. Skip the pre-training banana/sourdough meal.",
-    training:"Push A — normal session, but <b>drop the weight 20–30% and push reps to 15–20</b>. Goal is draining glycogen through volume, not strength.",
-    water:"High — 4–4.5 L as normal.", sodium:"Normal — don't restrict yet.", cardio:"Light walking only — no HIIT, no long cardio." },
+    banner:"Draining muscle glycogen through low carbs and high-rep volume. Follow today exactly — don't freelance extras.",
+    session:{name:"Push A — Depletion", focus:SESSIONS[1].focus, ex:depEx(1),
+      note:"Load: 70–80% of your normal weights (drop 20–30%). High reps, controlled — you're draining glycogen, not chasing strength."},
+    cardio:"Light walk · 20–30 min easy",
+    meals:EW_LOWM,
+    mealNote:"~100g carbs — deliberately low to draw down glycogen. Protein stays high. No pre-training meal this week.",
+    water:"4–4.5 L — stay high", sodium:"Normal — don't restrict yet" },
+
   { d:"Day −4", tag:"Deplete",
-    carbs:"Low — <b>~100g carbs</b>, same meal amounts as yesterday (Phase 2 rest-day portions). No pre-training meal.",
-    training:"Pull A — light weight (−20–30%), <b>15–20 reps</b>, high volume.",
-    water:"High — 4–4.5 L.", sodium:"Normal.", cardio:"Light walking only." },
+    banner:"Second depletion day — same rules as yesterday.",
+    session:{name:"Pull A — Depletion", focus:SESSIONS[2].focus, ex:depEx(2),
+      note:"Load: 70–80% of normal (drop 20–30%). Keep deadlifts especially crisp at high reps — form first."},
+    cardio:"Light walk · 20–30 min easy",
+    meals:EW_LOWM,
+    mealNote:"~100g carbs — same as yesterday.",
+    water:"4–4.5 L — stay high", sodium:"Normal — don't restrict yet" },
+
   { d:"Day −3", tag:"Last low day",
-    carbs:"<b>~100–120g carbs</b> — last low-carb day. Same portion template as Mon/Tue.",
-    training:"Legs A — <b>last full session of the week</b>. Light weight, 15–20 reps. After today, training is done or very light only.",
-    water:"Still high — 4–4.5 L.", sodium:"Still normal.", cardio:"Light walking only." },
+    banner:"Last low-carb day and last full session. After today, training is done or very light only.",
+    session:{name:"Legs A — Depletion", focus:SESSIONS[3].focus, ex:depEx(3),
+      note:"Load: 70–80% of normal (drop 20–30%). Last full session of the program — finish it clean."},
+    cardio:"Light walk · 20–30 min easy",
+    meals:EW_LOWM,
+    mealNote:"~100–120g carbs — loading starts tomorrow.",
+    water:"4–4.5 L — stay high", sodium:"Normal — don't restrict yet" },
+
   { d:"Day −2", tag:"Carb load",
-    carbs:"<b>Load — 400–500g carbs</b> from clean sources: white rice, sweet potato, and the banana + sourdough combo. This refills the glycogen you drained Mon–Wed; glycogen pulls water <i>into</i> the muscle, which reads as full, not puffy.",
-    training:"<b>None</b>, or a very light pump-focused session only if you want it.",
-    water:"Keep high — 4–4.5 L.", sodium:"Normal — <b>don't cut yet</b>.", cardio:"Light walking only." },
+    banner:"The load. Refilling the glycogen you drained Mon–Wed — it pulls water into the muscle, which reads as full, not puffy.",
+    session:{name:"Optional pump session", focus:"Only if you feel like moving — otherwise full rest",
+      ex:[["DB or band press","2 × 15–20"],["Band or cable lateral raise","2 × 15–20"],
+          ["Band row or face pull","2 × 15–20"],["Band or light DB curl","2 × 15–20"]],
+      note:"Very light, stop miles from failure — you're moving blood, not training. Skipping this entirely is completely fine."},
+    cardio:"Light walk · 20–30 min easy",
+    meals:[
+      ["Meal 1 — Breakfast","250g Greek yoghurt + 1 scoop whey + 150g berries + <b>2 bananas</b>",555,52,84,4],
+      ["Meal 2 — Mid-morning","<b>2 bananas + 2 slices sourdough</b>",470,13,104,2],
+      ["Meal 3 — Lunch","200g chicken breast + <b>450g cooked rice</b> + veg",945,75,128,9],
+      ["Meal 4 — Afternoon","200g white fish + <b>450g cooked sweet potato</b> + veg",653,56,97,4],
+      ["Meal 5 — Dinner","180g chicken breast + 2 whole eggs + veg + <b>1.5 tbsp olive oil (21g)</b>",669,68,3,38]],
+    mealNote:"~415g carbs from clean sources — rice, sweet potato, banana, sourdough — spread across the day. Nothing new or exotic.",
+    water:"4–4.5 L — keep high", sodium:"Normal — don't cut yet" },
+
   { d:"Day −1", tag:"Dry out",
-    carbs:"<b>Moderate-high — 300–400g</b>, same clean sources. <b>Avoid high-fibre and gassy foods</b> — broccoli, legumes, large dairy serves — so you're not bloated tomorrow.",
-    training:"Rest.",
-    water:"<b>Taper down gradually</b> through the day — ease off, don't cut abruptly.",
-    sodium:"<b>Cut added salt from here.</b> No salt on food, no processed / salty / restaurant food. After days of normal sodium, dropping it now makes your body shed water from under the skin.",
-    cardio:"Light walking only.",
-    extra:"<b>Sleep is the priority tonight</b> — a bad night shows on your face and eyes more than almost anything else." },
+    banner:"Sodium cut + water taper. After days of normal sodium, dropping it now sheds water from under the skin.",
+    session:{name:"Rest", focus:"Nothing today — staying calm and off your feet is the work", ex:null},
+    cardio:"Light walk only if you want to move — short and easy",
+    meals:[
+      ["Meal 1 — Breakfast","1 scoop whey (in water) + <b>300g cooked rice</b> + <b>2 bananas</b>",720,35,141,3],
+      ["Meal 2 — Lunch","200g chicken breast + <b>350g cooked rice</b> + veg — no added salt",815,72,100,8],
+      ["Meal 3 — Afternoon","200g white fish + <b>350g cooked sweet potato</b> — no added salt",563,53,76,4],
+      ["Meal 4 — Dinner","180g chicken breast + 2 whole eggs + veg + <b>1.5 tbsp olive oil (21g)</b> — no added salt",669,68,3,38]],
+    mealNote:"~320g carbs. No yoghurt today (large dairy serve = bloat risk) and no sourdough (baked with salt). Low-fibre veg only in small amounts — cucumber, zucchini, green beans. No broccoli, cauliflower or legumes.",
+    water:"Taper down gradually through the day — ease off, don't cut abruptly",
+    sodium:"CUT from here — no added salt, no processed / salty / restaurant food",
+    extra:"<b>Sleep is the priority tonight</b> — a bad night shows on your face and eyes tomorrow more than almost anything else." },
+
   { d:"EVENT DAY", tag:"Peak",
-    carbs:"Small feed <b>2–4 hours before</b> if you want extra fullness — <b>30–50g</b> from rice cakes, white rice or honey. Don't overdo it; a big meal now looks like bloat, not fullness.",
-    training:"<b>Pump-up 60–90 min before</b> the moment you want to look your best — bands or light weights, high reps, just enough blood in the muscle without fatigue.",
-    water:"<b>Small sips only</b> through the morning — tight, not bone dry. Real dehydration blurs definition and looks flat and unwell.",
-    sodium:"Stay low — no added salt.", cardio:"None.",
-    extra:"Enjoy it — you've earned this after 12 weeks." },
+    banner:"Tight, full, dry — everything this week was for today. Keep it calm and simple.",
+    session:{name:"Pump-up — 60–90 min before", focus:"Light, high-rep, stop fresh",
+      ex:[["Push-ups","2 × 12–15"],["Band lateral raises","2 × 15–20"],
+          ["Band rows","2 × 15–20"],["Band curls","2 × 15–20"]],
+      note:"Just enough to get blood in the muscle without fatiguing yourself. Stop while everything still feels easy."},
+    cardio:null,
+    meals:[
+      ["Pre-event feed — 2–4 h before","<b>150g cooked white rice + a drizzle of honey</b> (or 3–4 rice cakes with honey) · optional 1 scoop whey in water",225,4,50,1],
+      ["After the event","Eat and drink normally — rehydrate with water + electrolytes. You've earned it.",0,0,0,0]],
+    mealNote:"30–50g carbs, small and familiar — a big meal now looks like bloat, not fullness. Nothing new today.",
+    noTotals:true,
+    water:"Small sips only through the morning — tight, not bone dry. Real dehydration blurs definition and looks flat and unwell",
+    sodium:"Stay low — no added salt" },
 ];
 
 /* ============ DATE HELPERS ============ */
 const dayMS = 86400000;
 const utc = (y,m,d)=>Date.UTC(y,m-1,d);
 const startUTC = utc(START.y,START.m,START.d);
-function dayIndex(dt){ return Math.round((utc(dt.getFullYear(),dt.getMonth()+1,dt.getDate()) - startUTC)/dayMS); } // 0 = day 1
-function weekOf(idx){ return Math.floor(idx/7)+1; }
+const docw0UTC = utc(DOCW0.y,DOCW0.m,DOCW0.d);
+const evmonUTC = utc(EVENTMON.y,EVENTMON.m,EVENTMON.d);
+const dUTC = dt => utc(dt.getFullYear(),dt.getMonth()+1,dt.getDate());
+function dayIndex(dt){ return Math.round((dUTC(dt) - startUTC)/dayMS); }                 // 0 = day 1 (Thu 9 Jul)
+function weekOf(dt){ return Math.max(1, Math.floor((dUTC(dt) - docw0UTC)/dayMS/7)+1); }  // Mon-aligned program weeks
+function eventIdx(dt){ return Math.round((dUTC(dt) - evmonUTC)/dayMS); }                 // 0 = Mon 28 Sep
 function fmt(dt){ return `${DOW[dt.getDay()]} ${dt.getDate()} ${MON[dt.getMonth()]}`; }
+function fmtShort(dt){ return `${DOW[dt.getDay()].slice(0,3)} ${dt.getDate()} ${MON[dt.getMonth()]}`; }
 function iso(dt){ return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,"0")}-${String(dt.getDate()).padStart(2,"0")}`; }
+function fromIso(s){ const [y,m,d]=s.split("-").map(Number); return new Date(y,m-1,d); }
 function phaseKeyForWeek(w){ return w<=6 ? "p1" : w<=10 ? "p2" : w===11 ? "p3" : "p4"; }
 
-/* ============ STATE / CHECKLIST ============ */
+/* ============ STATE / STORAGE ============ */
 let viewDate = new Date();
 function getChecks(dt){ try{ return JSON.parse(localStorage.getItem("p12-"+iso(dt))||"[]"); }catch(e){ return []; } }
 function setCheck(dt,id,on){
@@ -318,9 +404,14 @@ function setCheck(dt,id,on){
   if(!on) a = a.filter(x=>x!==id);
   localStorage.setItem(k, JSON.stringify(a));
 }
+function getWeights(){ try{ return JSON.parse(localStorage.getItem("p12-weights")||"{}"); }catch(e){ return {}; } }
+function saveWeight(dateIso, v){
+  const w = getWeights();
+  if(v==null) delete w[dateIso]; else w[dateIso]=v;
+  localStorage.setItem("p12-weights", JSON.stringify(w));
+}
 
 /* ============ RENDER HELPERS ============ */
-const esc = s=>s;
 function chkRow(id, title, sub, meta, checked, tag){
   return `<div class="chk${checked?" on":""}" data-chk="${id}">
     <div class="box"></div>
@@ -339,6 +430,59 @@ function totalsGrid(k,p,c,f){
     <div class="cell"><div class="v">${f}g</div><div class="k">Fat</div></div>
   </div>`;
 }
+function sessionCard(S, opts){
+  opts = opts||{};
+  const rows = S.ex ? S.ex.map(e=>`<tr><td>${e[0]}</td><td>${e[1]}</td></tr>`).join("") : "";
+  return `<div class="card">
+    <h2><span class="ic">🏋️</span>Today's session</h2>
+    <h3>${S.name}${opts.tag?`<span class="tag" style="color:var(--amber);border-color:rgba(251,191,36,.4)">${opts.tag}</span>`:""}</h3>
+    <div class="sub">${S.focus}</div>
+    ${S.ex?`<table style="margin-top:10px"><tr><th>Exercise</th><th>Sets × Reps</th></tr>${rows}</table>`:""}
+    ${S.note?`<div class="note">${S.note}</div>`:""}
+    ${opts.extraNote||""}
+    ${opts.details||""}
+  </div>`;
+}
+function mealsCard(meals, checks, heading, footNote, showTotals, details){
+  const rows = meals.map((m,i)=>chkRow("meal"+i, m[0], m[1],
+    m[2]?`${m[2]} kcal · ${m[3]}g P · ${m[4]}g C · ${m[5]}g F`:"", checks.includes("meal"+i))).join("");
+  const tot = meals.reduce((a,m)=>[a[0]+m[2],a[1]+m[3],a[2]+m[4],a[3]+m[5]],[0,0,0,0]);
+  return `<div class="card">
+    <h2><span class="ic">🍽</span>${heading}</h2>
+    ${rows}
+    ${showTotals?totalsGrid(Math.round(tot[0]),Math.round(tot[1]),Math.round(tot[2]),Math.round(tot[3])):""}
+    ${footNote?`<div class="targetline">${footNote}</div>`:""}
+    ${details||""}
+  </div>`;
+}
+function weighRow(dt){
+  const w = getWeights()[iso(dt)];
+  const logged = w!=null;
+  return `<div class="chk${logged?" on":""}" data-weigh="1" style="cursor:default">
+    <div class="box"></div>
+    <div class="body">
+      <div class="t">Morning weigh-in</div>
+      <div class="s">Daily — trends matter, single readings bounce with carb cycling</div>
+      <div class="winput">
+        <input id="wIn" type="number" inputmode="decimal" step="0.1" min="30" max="250" placeholder="0.0" value="${logged?w:""}">
+        <span class="unit">kg</span>
+        <button id="wSave">${logged?"Update":"Save"}</button>
+      </div>
+      ${logged?`<div class="wlogged">Logged: ${w.toFixed(1)} kg — full history in the Weight tab</div>`:""}
+    </div>
+  </div>`;
+}
+function habitsCard(dt, checks, eventWeek){
+  return `<div class="card">
+    <h2><span class="ic">✅</span>Daily non-negotiables</h2>
+    ${chkRow("h-sleep","Sleep 7.5–9 hours","The single biggest lever for keeping muscle in a deficit","",checks.includes("h-sleep"))}
+    ${eventWeek
+      ? chkRow("h-steps","Stay lightly active","Easy walking only this week — no HIIT, no long cardio","",checks.includes("h-steps"))
+      : chkRow("h-steps","8,000–10,000 steps","Outside of training","",checks.includes("h-steps"))}
+    ${weighRow(dt)}
+    ${dt.getDay()===0?chkRow("h-photos","Weekly photos + waist measurement","Same time of day, same lighting as last week","",checks.includes("h-photos")):""}
+  </div>`;
+}
 
 /* ============ TODAY VIEW ============ */
 function renderToday(){
@@ -348,37 +492,20 @@ function renderToday(){
   const dow = viewDate.getDay();
   const checks = getChecks(viewDate);
 
-  /* header pieces */
   document.getElementById("dateTitle").textContent = fmt(viewDate);
   const isToday = iso(viewDate)===iso(new Date());
   document.getElementById("todayBtn").classList.toggle("hidden", isToday);
 
-  /* before program */
+  /* before commencement (only reachable by browsing back) */
   if(idx < 0){
-    chip.textContent = "Pre-program"; chip.className = "phasechip";
-    document.getElementById("dateSub").textContent = "Program starts Mon 13 July";
+    chip.textContent = "PEAK/12"; chip.className = "phasechip";
+    document.getElementById("dateSub").textContent = "Before commencement";
     document.getElementById("progBar").style.width = "0%";
     document.getElementById("progLabel").textContent = "";
-    el.innerHTML = `
-      <div class="card center">
-        <div class="sub" style="margin-bottom:6px">Program starts in</div>
-        <div class="countnum">${-idx} day${idx===-1?"":"s"}</div>
-        <div class="sub" style="margin-top:6px">Monday 13 July → event day Saturday 3 October</div>
-      </div>
-      <div class="card">
-        <h2><span class="ic">🛒</span>Get ready — shopping list</h2>
-        ${chkRow("prep-1","Proteins","Chicken breast · white fish · eggs · low-fat Greek yoghurt · whey","",checks.includes("prep-1"))}
-        ${chkRow("prep-2","Carbs","White rice · sweet potato · bananas · sourdough · frozen berries","",checks.includes("prep-2"))}
-        ${chkRow("prep-3","Fats","Olive oil · almonds (or peanut butter / mixed nuts / avocado as swaps)","",checks.includes("prep-3"))}
-        ${chkRow("prep-4","Extras","Veg for every main meal · electrolyte tabs or salt for training days","",checks.includes("prep-4"))}
-        ${chkRow("prep-5","Kitchen scale","Portions are in exact grams — a scale removes all guessing","",checks.includes("prep-5"))}
-        ${chkRow("prep-6","Baseline photos + waist measurement","Same time of day, same lighting — you'll thank yourself in week 12","",checks.includes("prep-6"))}
-      </div>
-      <div class="card">
-        <h2><span class="ic">👁</span>Preview</h2>
-        <div class="sub">Use the arrows above to browse any day of the program — day 1 is Monday 13 July.</div>
-      </div>`;
-    bindChecks(el);
+    el.innerHTML = `<div class="card center">
+      <div class="bigday">Program commenced<br>Thursday 9 July</div>
+      <div class="sub" style="margin-top:8px">Use the arrows above to get back to the plan.</div>
+    </div>`;
     return;
   }
 
@@ -391,13 +518,13 @@ function renderToday(){
     el.innerHTML = `
       <div class="card center">
         <div style="font-size:40px;margin-bottom:8px">🏆</div>
-        <div class="bigday">12 weeks. Done.</div>
+        <div class="bigday">Done.</div>
         <div class="sub" style="margin-top:8px">Eat normally, drink normally, rest up.<br>Reverse calories up gradually over the next couple of weeks rather than swinging straight into a surplus.</div>
       </div>`;
     return;
   }
 
-  const week = weekOf(idx);
+  const week = weekOf(viewDate);
   const pk = phaseKeyForWeek(week);
   const P = PHASES[pk];
   const isDeload = DELOAD_WEEKS.includes(week);
@@ -408,40 +535,45 @@ function renderToday(){
   document.getElementById("progBar").style.width = Math.round(dayNum/TOTAL_DAYS*100)+"%";
   document.getElementById("progLabel").textContent = Math.round(dayNum/TOTAL_DAYS*100)+"% complete";
 
+  const parts = [];
+
   /* ---- EVENT WEEK ---- */
   if(pk==="p4"){
-    const ei = idx - 77; /* 0..6 (Mon..Sun of week 12) */
-    if(ei > 5){ /* Sunday after event */
-      el.innerHTML = `<div class="card center"><div style="font-size:40px;margin-bottom:8px">🏆</div>
-        <div class="bigday">It's done.</div>
-        <div class="sub" style="margin-top:8px">Rest, eat and drink normally again.</div></div>`;
-      return;
-    }
+    const ei = Math.min(Math.max(eventIdx(viewDate),0),5);
     const E = EVENT_WEEK[ei];
     const isEventDay = ei===5;
-    el.innerHTML = `
-      ${isEventDay
-        ? `<div class="banner green"><b>🏁 EVENT DAY</b>Tight, full, dry — everything this week was for today. Keep it calm and simple.</div>`
-        : `<div class="banner red"><b>Event week — ${E.d} · ${E.tag}</b>Small, deliberate manipulations only. Follow today exactly; don't freelance extras.</div>`}
-      <div class="card">
-        <h2><span class="ic">🍚</span>Carbs & food</h2>
-        <div class="sub" style="color:var(--text)">${E.carbs}</div>
+
+    parts.push(isEventDay
+      ? `<div class="banner green"><b>🏁 EVENT DAY</b>${E.banner}</div>`
+      : `<div class="banner red"><b>Event week — ${E.d} · ${E.tag}</b>${E.banner}</div>`);
+
+    parts.push(sessionCard(E.session));
+
+    if(E.cardio){
+      parts.push(`<div class="card"><h2><span class="ic">🏃</span>Cardio</h2>
+        ${chkRow("cardio", E.cardio, "No HIIT, no long cardio this week — walking only.","",checks.includes("cardio"))}
+      </div>`);
+    }
+
+    parts.push(mealsCard(E.meals, checks, `Meals — ${isEventDay?"event day":E.tag.toLowerCase()}`,
+      E.mealNote, !E.noTotals));
+
+    parts.push(`<div class="card">
+      <h2><span class="ic">💧</span>Water & sodium</h2>
+      <div class="statgrid">
+        <div class="stat"><div class="v">Water</div><div class="k">${E.water}</div></div>
+        <div class="stat"><div class="v">Sodium</div><div class="k">${E.sodium}</div></div>
       </div>
-      <div class="card">
-        <h2><span class="ic">🏋️</span>Training</h2>
-        <div class="sub" style="color:var(--text)">${E.training}</div>
-      </div>
-      <div class="card">
-        <h2><span class="ic">💧</span>Water & sodium</h2>
-        <div class="statgrid">
-          <div class="stat"><div class="v">Water</div><div class="k">${E.water}</div></div>
-          <div class="stat"><div class="v">Sodium</div><div class="k">${E.sodium}</div></div>
-        </div>
-        <div class="note">Cardio: ${E.cardio}</div>
-      </div>
-      ${E.extra?`<div class="card"><h2><span class="ic">⭐</span>Priority</h2><div class="sub" style="color:var(--text)">${E.extra}</div></div>`:""}
-      <div class="banner amber"><b>Safety line</b>If you feel genuinely unwell at any point — dizzy, disoriented, racing heart, severe cramping — stop the protocol, drink water normally and eat normally. One day is never worth your health.</div>`;
-    bindChecks(el);
+    </div>`);
+
+    if(E.extra) parts.push(`<div class="card"><h2><span class="ic">⭐</span>Priority</h2><div class="sub" style="color:var(--text)">${E.extra}</div></div>`);
+
+    parts.push(habitsCard(viewDate, checks, true));
+
+    parts.push(`<div class="banner amber"><b>Safety line</b>If you feel genuinely unwell at any point — dizzy, disoriented, racing heart, severe cramping — stop the protocol, drink water normally and eat normally. One day is never worth your health.</div>`);
+
+    el.innerHTML = parts.join("");
+    bindChecks(el); bindWeigh(el);
     return;
   }
 
@@ -449,31 +581,24 @@ function renderToday(){
   const training = dow !== 0;
   const S = training ? SESSIONS[dow] : null;
   const meals = mealsFor(pk, training);
-  const tot = meals.reduce((a,m)=>[a[0]+m[2],a[1]+m[3],a[2]+m[4],a[3]+m[5]],[0,0,0,0]);
   const cardio = P.cardio[dow];
-  const parts = [];
 
   if(isDeload){
     parts.push(`<div class="banner amber"><b>⚠️ Deload week — non-negotiable</b>
       Cut sets ~40% (4 sets → 2–3), keep weights around 70% of normal, stay a few reps short of failure. Same split, lighter and shorter sessions. This protects joints, CNS and hormones — skipping it is how people burn out around week 8–9.</div>`);
   }
 
-  /* training card */
   if(training){
-    const rows = S.ex.map(e=>`<tr><td>${e[0]}</td><td>${e[1]}</td></tr>`).join("");
-    parts.push(`<div class="card">
-      <h2><span class="ic">🏋️</span>Today's session</h2>
-      <h3>${S.name}${isDeload?'<span class="tag" style="color:var(--amber);border-color:rgba(251,191,36,.4)">Deload</span>':""}</h3>
-      <div class="sub">${S.focus}</div>
-      <table style="margin-top:10px"><tr><th>Exercise</th><th>Sets × Reps</th></tr>${rows}</table>
-      ${isDeload?`<div class="note" style="color:#fde68a">Deload: run 2–3 sets per exercise at ~70% of usual weight, well short of failure.</div>`:""}
-      <details><summary>Effort, rests & progression</summary><div class="inner"><ul>
+    parts.push(sessionCard(S, {
+      tag: isDeload ? "Deload" : "",
+      extraNote: isDeload ? `<div class="note" style="color:#fde68a">Deload: run 2–3 sets per exercise at ~70% of usual weight, well short of failure.</div>` : "",
+      details: `<details><summary>Effort, rests & progression</summary><div class="inner"><ul>
         <li><b>Effort:</b> RPE 8–9 — leave 1–2 reps in the tank on most sets. True failure only on a final set, and only when recovering well.</li>
         <li><b>Rest:</b> 2–3 min on compounds · 60–90 s on isolation.</li>
         <li><b>Progression:</b> beat last week — one more rep at the same weight, or same reps slightly heavier. Log every set.</li>
         <li>If a lift stalls 2+ sessions, that's normal in a deficit — hold the weight and keep the reps clean.</li>
-      </ul></div></details>
-    </div>`);
+      </ul></div></details>`
+    }));
   } else {
     parts.push(`<div class="card">
       <h2><span class="ic">🛋</span>Today's session</h2>
@@ -482,7 +607,6 @@ function renderToday(){
     </div>`);
   }
 
-  /* cardio */
   if(cardio){
     parts.push(`<div class="card">
       <h2><span class="ic">🏃</span>Cardio</h2>
@@ -492,21 +616,16 @@ function renderToday(){
     </div>`);
   }
 
-  /* meals */
-  const mealRows = meals.map((m,i)=>chkRow("meal"+i, m[0], m[1], `${m[2]} kcal · ${m[3]}g P · ${m[4]}g C · ${m[5]}g F`, checks.includes("meal"+i))).join("");
-  parts.push(`<div class="card">
-    <h2><span class="ic">🍽</span>Meals — ${training?"training day":"rest day"}</h2>
-    ${mealRows}
-    ${totalsGrid(Math.round(tot[0]),Math.round(tot[1]),Math.round(tot[2]),Math.round(tot[3]))}
-    <div class="targetline">Phase target: ${TARGETS[pk][training?"tr":"re"]}. Protein runs 30–40g over target by design — it's a buffer, not a mistake. Hit protein and watch the scale trend; don't chase calories to the digit.</div>
-    <details><summary>Swaps & notes</summary><div class="inner"><ul>
+  parts.push(mealsCard(meals, checks, `Meals — ${training?"training day":"rest day"}`,
+    `Phase target: ${TARGETS[pk][training?"tr":"re"]}. Protein runs 30–40g over target by design — it's a buffer, not a mistake. Hit protein and watch the scale trend; don't chase calories to the exact digit.`,
+    true,
+    `<details><summary>Swaps & notes</summary><div class="inner"><ul>
       <li>Olive oil is capped at 1.5 tbsp/day (used to cook Meal 4) — the rest of the fat comes from almonds because they're easy to actually eat.</li>
       <li>Not into almonds? Swap roughly gram-for-gram with peanut butter, mixed nuts, or half an avocado.</li>
-      <li>Veg with every main meal, salt to taste (this phase).</li>
-    </ul></div></details>
-  </div>`);
+      <li>Veg with every main meal, salt to taste (until event week).</li>
+      <li>Rice and sweet potato weights are <b>cooked</b> weights.</li>
+    </ul></div></details>`));
 
-  /* hydration */
   parts.push(`<div class="card">
     <h2><span class="ic">💧</span>Hydration & electrolytes</h2>
     <div class="statgrid">
@@ -516,17 +635,10 @@ function renderToday(){
     <div class="note">${P.waterNote} A pinch of salt in water or a low-sugar electrolyte tab on hard or hot days is smart. Feeling flat or fatigued as carbs drop is usually water + electrolytes, not the diet failing. Persistent cramps, dizziness or headaches = add water and salt back, don't push through.</div>
   </div>`);
 
-  /* daily habits */
-  parts.push(`<div class="card">
-    <h2><span class="ic">✅</span>Daily non-negotiables</h2>
-    ${chkRow("h-sleep","Sleep 7.5–9 hours","The single biggest lever for keeping muscle in a deficit","",checks.includes("h-sleep"))}
-    ${chkRow("h-steps","8,000–10,000 steps","Outside of training","",checks.includes("h-steps"))}
-    ${chkRow("h-weigh","Morning weigh-in","Daily — trends matter, single readings bounce with carb cycling","",checks.includes("h-weigh"))}
-    ${dow===0?chkRow("h-photos","Weekly photos + waist measurement","Same time of day, same lighting as last week","",checks.includes("h-photos")):""}
-  </div>`);
+  parts.push(habitsCard(viewDate, checks, false));
 
   el.innerHTML = parts.join("");
-  bindChecks(el);
+  bindChecks(el); bindWeigh(el);
 }
 
 function bindChecks(root){
@@ -538,12 +650,109 @@ function bindChecks(root){
     });
   });
 }
+function bindWeigh(root){
+  const inp = root.querySelector("#wIn"), btn = root.querySelector("#wSave");
+  if(!inp||!btn) return;
+  const save = ()=>{
+    const v = parseFloat(inp.value);
+    if(isNaN(v)||v<30||v>250){ inp.style.borderColor="var(--red)"; setTimeout(()=>inp.style.borderColor="",800); return; }
+    saveWeight(iso(viewDate), Math.round(v*10)/10);
+    renderToday();
+  };
+  btn.addEventListener("click", e=>{ e.stopPropagation(); save(); });
+  inp.addEventListener("click", e=>e.stopPropagation());
+  inp.addEventListener("keydown", e=>{ if(e.key==="Enter"){ inp.blur(); save(); } });
+}
+
+/* ============ WEIGHT VIEW ============ */
+function renderWeight(){
+  const el = document.getElementById("weightView");
+  const w = getWeights();
+  const entries = Object.keys(w).sort().map(k=>({date:k, kg:w[k]})); // chronological
+
+  if(entries.length===0){
+    el.innerHTML = `<div class="card">
+      <h2><span class="ic">↘</span>Weight log</h2>
+      <div class="empty">No entries yet.<br><br>Log your morning weigh-in from the Today tab — every entry lands here automatically.</div>
+    </div>`;
+    return;
+  }
+
+  const latest = entries[entries.length-1];
+  const first = entries[0];
+  const latestUTC = utc(...latest.date.split("-").map(Number));
+  let ago7 = null;
+  for(let i=entries.length-2;i>=0;i--){
+    if(latestUTC - utc(...entries[i].date.split("-").map(Number)) >= 7*dayMS){ ago7 = entries[i]; break; }
+  }
+  const fmtD = v => (v>0?"+":"")+v.toFixed(1);
+  const cls = v => v<0?"down":(v>0?"up":"flat");
+  const total = latest.kg - first.kg;
+
+  /* chart: last 90 entries */
+  const pts = entries.slice(-90);
+  let chart = "";
+  if(pts.length>=2){
+    const W=320,H=140,padX=6,padY=14;
+    const vals = pts.map(p=>p.kg);
+    let lo=Math.min(...vals), hi=Math.max(...vals);
+    if(hi-lo<1){ const m=(hi+lo)/2; lo=m-0.5; hi=m+0.5; }
+    const x=i=>padX+i*(W-2*padX)/(pts.length-1);
+    const y=v=>padY+(hi-v)*(H-2*padY)/(hi-lo);
+    const line = pts.map((p,i)=>`${x(i).toFixed(1)},${y(p.kg).toFixed(1)}`).join(" ");
+    const dots = pts.length<=31 ? pts.map((p,i)=>`<circle cx="${x(i).toFixed(1)}" cy="${y(p.kg).toFixed(1)}" r="2.6" fill="var(--acc)"/>`).join("") : "";
+    chart = `<div class="chartbox"><svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+      <text x="${padX}" y="10" font-size="9" fill="var(--dim)">${hi.toFixed(1)} kg</text>
+      <text x="${padX}" y="${H-3}" font-size="9" fill="var(--dim)">${lo.toFixed(1)} kg</text>
+      <polyline points="${line}" fill="none" stroke="var(--acc)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+      ${dots}
+    </svg></div>`;
+  }
+
+  const list = entries.slice().reverse().map((p,ri)=>{
+    const i = entries.length-1-ri;
+    const prev = i>0 ? entries[i-1].kg : null;
+    const d = prev!=null ? p.kg-prev : null;
+    return `<div class="wrowline">
+      <div class="wd">${fmtShort(fromIso(p.date))}</div>
+      <div class="wv">${p.kg.toFixed(1)} kg</div>
+      <div class="wdelta ${d!=null?cls(d):"flat"}">${d!=null?fmtD(d):"—"}</div>
+      <button class="wdel" data-del="${p.date}" aria-label="Delete entry">✕</button>
+    </div>`;
+  }).join("");
+
+  el.innerHTML = `
+    <div class="card">
+      <h2><span class="ic">↘</span>Weight log</h2>
+      <div class="wstatgrid">
+        <div class="stat"><div class="v">${latest.kg.toFixed(1)} kg</div><div class="k">Latest — ${fmtShort(fromIso(latest.date))}</div></div>
+        <div class="stat"><div class="v ${ago7?cls(latest.kg-ago7.kg):"flat"}">${ago7?fmtD(latest.kg-ago7.kg)+" kg":"—"}</div><div class="k">vs ~7 days ago</div></div>
+        <div class="stat"><div class="v ${cls(total)}">${fmtD(total)} kg</div><div class="k">Since first entry (${fmtShort(fromIso(first.date))})</div></div>
+        <div class="stat"><div class="v">${entries.length}</div><div class="k">Entries</div></div>
+      </div>
+      ${chart}
+      <div class="targetline">Judge the week, not the day — carb cycling bounces the scale day to day. To edit a day's weight, open that day in the Today tab and re-save.</div>
+    </div>
+    <div class="card">
+      <h2><span class="ic">🗓</span>All entries</h2>
+      ${list}
+    </div>`;
+
+  el.querySelectorAll("[data-del]").forEach(b=>{
+    b.addEventListener("click",()=>{
+      const d = b.dataset.del;
+      if(confirm(`Delete the entry for ${fmtShort(fromIso(d))}?`)){
+        saveWeight(d, null); renderWeight();
+      }
+    });
+  });
+}
 
 /* ============ PLAN VIEW ============ */
 function renderPlan(){
-  const idx = dayIndex(new Date());
-  const curWeek = (idx>=0 && idx<TOTAL_DAYS) ? weekOf(idx) : 0;
-  const curPk = curWeek ? phaseKeyForWeek(curWeek) : "";
+  const now = new Date();
+  const idx = dayIndex(now);
+  const curPk = (idx>=0 && idx<TOTAL_DAYS) ? phaseKeyForWeek(weekOf(now)) : "";
   const el = document.getElementById("planView");
 
   const block = (pk,items)=>`
@@ -555,7 +764,7 @@ function renderPlan(){
 
   el.innerHTML = `
     <div class="card">
-      <h2><span class="ic">🗓</span>The 12 weeks at a glance</h2>
+      <h2><span class="ic">🗓</span>The program at a glance</h2>
       ${block("p1",[
         "Small deficit — recomposition while holding strength",
         "Train 6×/week · cardio 3×/week (Tue, Thu, Sun · 25–30 min LISS)",
@@ -563,7 +772,7 @@ function renderPlan(){
         "Deload: week 4 (Mon 3 – Sun 9 Aug)"])}
       ${block("p2",[
         "Calories tighten (~2,400 training / ~2,050 rest)",
-        "Cardio rises: LISS 30 min Tue–Fri + Sun, plus 1 HIIT on a push day",
+        "Cardio rises: LISS 30 min Tue–Fri + Sun, plus 1 HIIT on Monday's push day",
         "Water 4–4.5 L · don't under-salt",
         "Deload: week 8 (Mon 31 Aug – Sun 6 Sep)"])}
       ${block("p3",[
@@ -571,14 +780,14 @@ function renderPlan(){
         "Heaviest cardio week: 5× LISS 30–35 min + 1 HIIT — full training intensity, no taper",
         "Keep water and sodium consistent — no manipulation yet"])}
       ${block("p4",[
-        "Mon–Wed: carbs ~100g, light-weight high-rep training, water & sodium normal",
-        "Thu: carb load 400–500g, little/no training",
-        "Fri: carbs 300–400g, cut added salt, taper water, sleep well",
-        "Sat 3 Oct: sips only, small carb feed 2–4 h out, pump 60–90 min out — event day 🏁"])}
+        "Mon–Wed: ~100g carbs, high-rep depletion training at 70–80% load — full meals & sessions in the Today view",
+        "Thu: carb load ~415g, optional pump only",
+        "Fri: ~320g carbs, sodium cut, water taper, low-fibre food, sleep well",
+        "Sat 3 Oct: sips of water, small carb feed 2–4 h out, pump 60–90 min out — event day 🏁"])}
     </div>
 
     <div class="card">
-      <h2><span class="ic">🏋️</span>Weekly split (all 12 weeks)</h2>
+      <h2><span class="ic">🏋️</span>Weekly split (all normal weeks)</h2>
       <table>
         <tr><th>Day</th><th>Session</th></tr>
         <tr><td>Monday</td><td>Push A — chest/shoulders/triceps</td></tr>
@@ -589,12 +798,12 @@ function renderPlan(){
         <tr><td>Saturday</td><td>Legs B — quads/hams/glutes/calves</td></tr>
         <tr><td>Sunday</td><td>Off — full rest</td></tr>
       </table>
-      <div class="note">A and B use different exercises/rep ranges so you're not repeating identical sessions — also easier on the joints over 12 straight weeks. Compounds 6–10 reps · isolation 10–15 · RPE 8–9 · rest 2–3 min compounds, 60–90 s isolation.</div>
+      <div class="note">A and B use different exercises/rep ranges so you're not repeating identical sessions — also easier on the joints across the program. Compounds 6–10 reps · isolation 10–15 · RPE 8–9 · rest 2–3 min compounds, 60–90 s isolation.</div>
     </div>
 
     <div class="card">
       <h2><span class="ic">🍽</span>How the meals work</h2>
-      <div class="sub" style="color:var(--text)">Same 4 fixed meals every day (+ a pre-training meal on training days). The only things that change by phase are the <b>rice</b> at Meal 2, the <b>sweet potato</b> at Meal 3, and the <b>almonds</b> at Meal 4. The Today tab always shows the exact grams for the current phase — zero guessing.</div>
+      <div class="sub" style="color:var(--text)">Same 4 fixed meals every day (+ a pre-training meal on training days). What changes by phase: the <b>rice</b> at Meal 2, the <b>sweet potato</b> at Meal 3, and the <b>almonds</b> at Meal 4. The Today tab always shows the exact grams for the current phase — zero guessing.</div>
       <table style="margin-top:10px">
         <tr><th>Meal</th><th>Fixed base</th></tr>
         <tr><td>Meal 1</td><td style="text-align:left;color:var(--mut)">250g Greek yoghurt + whey + 150g berries</td></tr>
@@ -603,6 +812,7 @@ function renderPlan(){
         <tr><td>Meal 3</td><td style="text-align:left;color:var(--mut)">200g white fish + sweet potato + veg</td></tr>
         <tr><td>Meal 4</td><td style="text-align:left;color:var(--mut)">180g chicken + 2 eggs + veg + oil + almonds</td></tr>
       </table>
+      <div class="note">Event week runs its own day-by-day meal plan — shown in full, meal by meal, in the Today view.</div>
     </div>
 
     <div class="card">
@@ -611,7 +821,7 @@ function renderPlan(){
         <li><b>Progress every session</b> — one more rep, or same reps slightly heavier. Log everything.</li>
         <li><b>Sleep 7.5–9 h</b> — the biggest muscle-retention lever there is.</li>
         <li><b>8–10k steps daily</b> outside training.</li>
-        <li><b>Weigh daily, judge weekly</b> — carb cycling bounces the scale day to day; only trends count.</li>
+        <li><b>Weigh daily, judge weekly</b> — log it in the app; the Weight tab keeps the full history.</li>
         <li><b>Photos + waist every Sunday</b> — same time, same lighting.</li>
         <li><b>Deloads in weeks 4 and 8</b> are part of the program, not optional.</li>
         <li>Consistently sore, flat or unmotivated for 3–4+ days = take an extra rest day or bring the deload forward.</li>
@@ -621,7 +831,7 @@ function renderPlan(){
     <div class="banner amber"><b>The one important caution</b>
     Peak week is a few days of smart carb/sodium timing — never near-zero water, diuretics or aggressive dehydration. The extreme version is where people get hurt, and it doesn't even look better. Feeling genuinely unwell = stop, drink, eat, done.</div>
 
-    <div class="proglabel" style="text-align:center;padding:18px 0 4px">Mon 13 July → Sat 3 October 2026 · built for one athlete, no fluff</div>
+    <div class="proglabel" style="text-align:center;padding:18px 0 4px">Commenced Thu 9 July → event day Sat 3 October 2026 · built for one athlete, no fluff</div>
   `;
 }
 
@@ -631,20 +841,20 @@ document.getElementById("prevBtn").addEventListener("click",()=>shiftDay(-1));
 document.getElementById("nextBtn").addEventListener("click",()=>shiftDay(1));
 document.getElementById("todayBtn").addEventListener("click",()=>{ viewDate = new Date(); renderToday(); });
 
-const tabT = document.getElementById("tabToday"), tabP = document.getElementById("tabPlan");
-tabT.addEventListener("click",()=>{
-  tabT.classList.add("active"); tabP.classList.remove("active");
-  document.getElementById("todayView").classList.remove("hide");
-  document.getElementById("planView").classList.add("hide");
-  document.getElementById("dateNav").style.display="flex";
-  window.scrollTo(0,0);
-});
-tabP.addEventListener("click",()=>{
-  tabP.classList.add("active"); tabT.classList.remove("active");
-  document.getElementById("planView").classList.remove("hide");
-  document.getElementById("todayView").classList.add("hide");
-  document.getElementById("dateNav").style.display="none";
-  renderPlan(); window.scrollTo(0,0);
+const tabs = [
+  {btn:"tabToday", view:"todayView", nav:true,  render:renderToday},
+  {btn:"tabWeight",view:"weightView",nav:false, render:renderWeight},
+  {btn:"tabPlan",  view:"planView",  nav:false, render:renderPlan},
+];
+tabs.forEach(t=>{
+  document.getElementById(t.btn).addEventListener("click",()=>{
+    tabs.forEach(o=>{
+      document.getElementById(o.btn).classList.toggle("active", o===t);
+      document.getElementById(o.view).classList.toggle("hide", o!==t);
+    });
+    document.getElementById("dateNav").style.display = t.nav ? "flex" : "none";
+    t.render(); window.scrollTo(0,0);
+  });
 });
 
 /* refresh when app is reopened on a new day */
@@ -654,7 +864,6 @@ document.addEventListener("visibilitychange",()=>{
 localStorage.setItem("p12-lastday", iso(new Date()));
 
 renderToday();
-renderPlan();
 </script>
 </body>
 </html>
