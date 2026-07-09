@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PEAK/12">
+<meta name="theme-color" content="#0a0d12">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.png">
+<title>PEAK/12 — 12-Week Program</title>
+<style>
+  :root{
+    --bg:#0a0d12; --card:#11161e; --card2:#161c26; --line:#212a37;
+    --text:#e9eef4; --mut:#8d99a8; --dim:#5b6775;
+    --acc:#a3e635; --accdim:rgba(163,230,53,.12);
+    --blue:#38bdf8; --bluedim:rgba(56,189,248,.12);
+    --amber:#fbbf24; --amberdim:rgba(251,191,36,.12);
+    --red:#f87171; --reddim:rgba(248,113,113,.10);
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;
+    font-size:15px; line-height:1.45;
+    padding-bottom:calc(84px + env(safe-area-inset-bottom));
+  }
+  .wrap{max-width:560px;margin:0 auto;padding:0 14px}
+
+  /* header */
+  header{
+    position:sticky;top:0;z-index:50;
+    background:rgba(10,13,18,.86);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+    border-bottom:1px solid var(--line);
+    padding-top:env(safe-area-inset-top);
+  }
+  .hrow{display:flex;align-items:center;justify-content:space-between;padding:12px 0 10px}
+  .brand{font-weight:800;font-size:17px;letter-spacing:.06em}
+  .brand span{color:var(--acc)}
+  .phasechip{font-size:11.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+    padding:5px 10px;border-radius:99px;background:var(--accdim);color:var(--acc)}
+  .phasechip.p2{background:var(--bluedim);color:var(--blue)}
+  .phasechip.p3{background:var(--amberdim);color:var(--amber)}
+  .phasechip.p4{background:var(--reddim);color:var(--red)}
+
+  /* date nav */
+  .datenav{display:flex;align-items:center;gap:8px;padding:10px 0 12px}
+  .datenav button.arrow{
+    width:38px;height:38px;border-radius:12px;border:1px solid var(--line);
+    background:var(--card);color:var(--text);font-size:18px;flex:none;cursor:pointer;
+  }
+  .datebox{flex:1;text-align:center}
+  .datebox .d1{font-weight:700;font-size:15.5px}
+  .datebox .d2{font-size:12px;color:var(--mut);margin-top:1px}
+  .todaybtn{
+    flex:none;border:none;background:var(--acc);color:#0a0d12;font-weight:700;font-size:12.5px;
+    padding:8px 12px;border-radius:10px;cursor:pointer;
+  }
+  .todaybtn.hidden{display:none}
+
+  /* progress */
+  .prog{height:4px;border-radius:99px;background:var(--line);overflow:hidden;margin-bottom:4px}
+  .prog i{display:block;height:100%;background:linear-gradient(90deg,var(--acc),#65d94a);border-radius:99px}
+  .proglabel{font-size:11px;color:var(--dim);text-align:right;padding-bottom:10px}
+
+  /* cards */
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin-top:14px}
+  .card h2{font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--mut);font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+  .card h2 .ic{font-size:14px}
+  .card h3{font-size:16.5px;font-weight:800;margin-bottom:2px}
+  .sub{color:var(--mut);font-size:13px}
+
+  .banner{border-radius:16px;padding:14px 16px;margin-top:14px;font-size:13.5px;line-height:1.5}
+  .banner b{display:block;font-size:14px;margin-bottom:3px}
+  .banner.amber{background:var(--amberdim);border:1px solid rgba(251,191,36,.35);color:#fde68a}
+  .banner.red{background:var(--reddim);border:1px solid rgba(248,113,113,.35);color:#fecaca}
+  .banner.green{background:var(--accdim);border:1px solid rgba(163,230,53,.3);color:#d9f99d}
+
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);text-align:left;font-weight:700;padding:6px 0}
+  th:last-child,td:last-child{text-align:right;white-space:nowrap}
+  td{padding:9px 0;border-top:1px solid var(--line)}
+  td:last-child{color:var(--mut);font-variant-numeric:tabular-nums}
+
+  /* checkable rows */
+  .chk{display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-top:1px solid var(--line);cursor:pointer}
+  .chk:first-of-type{border-top:none;padding-top:2px}
+  .box{flex:none;width:22px;height:22px;border-radius:7px;border:1.5px solid #33405147;border-color:#334051;margin-top:2px;
+    display:flex;align-items:center;justify-content:center;font-size:13px;color:#0a0d12;transition:all .15s}
+  .chk.on .box{background:var(--acc);border-color:var(--acc)}
+  .chk.on .box::after{content:"✓";font-weight:800}
+  .chk .body{flex:1}
+  .chk.on .body{opacity:.45}
+  .chk .t{font-weight:700;font-size:14.5px}
+  .chk .s{color:var(--mut);font-size:13px;margin-top:1px}
+  .chk .s b{color:var(--text);font-weight:700}
+  .chk .m{font-size:11.5px;color:var(--dim);margin-top:3px;font-variant-numeric:tabular-nums}
+  .tag{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+    padding:2px 7px;border-radius:6px;background:var(--card2);border:1px solid var(--line);color:var(--mut);margin-left:6px;vertical-align:1px}
+
+  .totals{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}
+  .totals .cell{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:9px 6px;text-align:center}
+  .totals .v{font-weight:800;font-size:15px;font-variant-numeric:tabular-nums}
+  .totals .k{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--dim);margin-top:1px}
+  .targetline{font-size:12px;color:var(--dim);margin-top:9px;line-height:1.5}
+
+  .note{font-size:12.5px;color:var(--mut);margin-top:10px;line-height:1.5;border-top:1px solid var(--line);padding-top:10px}
+
+  details{margin-top:10px;border-top:1px solid var(--line);padding-top:10px}
+  details summary{font-size:13px;font-weight:700;color:var(--blue);cursor:pointer;list-style:none}
+  details summary::-webkit-details-marker{display:none}
+  details summary::after{content:" +";color:var(--dim)}
+  details[open] summary::after{content:" –"}
+  details .inner{padding-top:8px;font-size:13px;color:var(--mut);line-height:1.55}
+  details .inner li{margin:5px 0 5px 16px}
+
+  .statgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .stat{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:12px}
+  .stat .v{font-weight:800;font-size:17px}
+  .stat .k{font-size:11px;color:var(--mut);margin-top:2px}
+
+  /* tabs */
+  nav{
+    position:fixed;left:0;right:0;bottom:0;z-index:60;
+    background:rgba(10,13,18,.9);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+    border-top:1px solid var(--line);
+    padding:8px 0 calc(8px + env(safe-area-inset-bottom));
+  }
+  .navrow{max-width:560px;margin:0 auto;display:flex}
+  .navrow button{
+    flex:1;background:none;border:none;color:var(--dim);font-size:11px;font-weight:700;
+    display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;cursor:pointer;letter-spacing:.03em
+  }
+  .navrow button .nic{font-size:20px;line-height:1}
+  .navrow button.active{color:var(--acc)}
+
+  .phaseblock{margin-top:14px;border-left:3px solid var(--line);padding-left:14px}
+  .phaseblock.active{border-left-color:var(--acc)}
+  .phaseblock .pt{font-weight:800;font-size:15px}
+  .phaseblock .pd{font-size:12.5px;color:var(--mut);margin:2px 0 6px}
+  .phaseblock ul{list-style:none}
+  .phaseblock li{font-size:13px;color:var(--mut);margin:4px 0;padding-left:14px;position:relative}
+  .phaseblock li::before{content:"·";position:absolute;left:2px;color:var(--acc);font-weight:800}
+  .nowtag{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.06em;background:var(--acc);color:#0a0d12;padding:2px 7px;border-radius:6px;margin-left:7px;vertical-align:1px}
+
+  .bigday{font-size:26px;font-weight:800;letter-spacing:-.01em}
+  .countnum{font-size:44px;font-weight:800;color:var(--acc);line-height:1.1}
+  .center{text-align:center;padding:26px 16px}
+
+  .hide{display:none}
+  h4.sec{font-size:13px;font-weight:800;margin:14px 0 4px;color:var(--text)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="hrow">
+      <div class="brand">PEAK<span>/12</span></div>
+      <div class="phasechip" id="phaseChip">—</div>
+    </div>
+    <div class="datenav" id="dateNav">
+      <button class="arrow" id="prevBtn" aria-label="Previous day">‹</button>
+      <div class="datebox">
+        <div class="d1" id="dateTitle">—</div>
+        <div class="d2" id="dateSub">—</div>
+      </div>
+      <button class="arrow" id="nextBtn" aria-label="Next day">›</button>
+      <button class="todaybtn hidden" id="todayBtn">Today</button>
+    </div>
+    <div class="prog" id="progWrap"><i id="progBar" style="width:0%"></i></div>
+    <div class="proglabel" id="progLabel"></div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div id="todayView"></div>
+  <div id="planView" class="hide"></div>
+</main>
+
+<nav>
+  <div class="navrow">
+    <button id="tabToday" class="active"><span class="nic">◉</span>Today</button>
+    <button id="tabPlan"><span class="nic">☰</span>Full Plan</button>
+  </div>
+</nav>
+
+<script>
+"use strict";
+
+/* ============ PROGRAM DATA ============ */
+
+const START = {y:2026, m:7, d:13};           // Mon 13 July 2026 (week 1, day 1)
+const EVENT = {y:2026, m:10, d:3};           // Sat 3 Oct 2026
+const TOTAL_DAYS = 84;                        // 12 weeks
+const DELOAD_WEEKS = [4, 8];
+const DOW = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+const SESSIONS = {
+  1:{name:"Push A", focus:"Chest · Shoulders · Triceps", ex:[
+    ["Barbell or DB bench press","4 × 8–10"],["Incline DB press","3 × 10–12"],
+    ["Seated shoulder press","3 × 10"],["Lateral raises","3 × 15"],
+    ["Triceps pushdown","3 × 12"],["Overhead triceps extension","2 × 12"]]},
+  2:{name:"Pull A", focus:"Back · Biceps", ex:[
+    ["Deadlift or rack pull","3 × 6–8"],["Lat pulldown or pull-ups","4 × 8–10"],
+    ["Seated cable row","3 × 10"],["Face pulls","3 × 15"],
+    ["Barbell curl","3 × 10"],["Hammer curl","2 × 12"]]},
+  3:{name:"Legs A", focus:"Quads · Hams · Glutes · Calves", ex:[
+    ["Squat","4 × 6–8"],["Romanian deadlift","3 × 10"],["Leg press","3 × 12"],
+    ["Leg curl","3 × 12"],["Walking lunges","2 × 12/leg"],["Calf raises","4 × 15"]]},
+  4:{name:"Push B", focus:"Chest · Shoulders · Triceps", ex:[
+    ["Incline barbell press","4 × 8–10"],["Flat DB press","3 × 10–12"],
+    ["DB shoulder press","3 × 10"],["Cable lateral raises","3 × 15"],
+    ["Dips (weighted if possible)","3 × 10"],["Rope pushdown","2 × 15"]]},
+  5:{name:"Pull B", focus:"Back · Biceps", ex:[
+    ["Barbell row","4 × 8–10"],["Single-arm DB row","3 × 10–12"],
+    ["Wide-grip pulldown","3 × 10"],["Rear delt fly","3 × 15"],
+    ["Preacher curl","3 × 10"],["Cable curl","2 × 12"]]},
+  6:{name:"Legs B", focus:"Quads · Hams · Glutes · Calves", ex:[
+    ["Front squat or hack squat","4 × 8–10"],["Stiff-leg deadlift","3 × 10"],
+    ["Leg extension","3 × 15"],["Seated leg curl","3 × 12"],
+    ["Bulgarian split squat","2 × 10/leg"],["Standing calf raise","4 × 15"]]},
+};
+
+const PHASES = {
+  p1:{chip:"Phase 1 · Recomp", cls:"", title:"Phase 1 — Recomp", range:"Weeks 1–6 · Mon 13 Jul → Sun 23 Aug",
+      water:"3.5–4 L", sodium:"Normal — salt food to taste",
+      waterNote:"No restriction needed — the deficit is small this phase.",
+      cardio:{2:"LISS · 25–30 min",4:"LISS · 25–30 min",0:"LISS · 25–30 min"}},
+  p2:{chip:"Phase 2 · Tighten", cls:"p2", title:"Phase 2 — Tighten", range:"Weeks 7–10 · Mon 24 Aug → Sun 20 Sep",
+      water:"4–4.5 L", sodium:"Normal to slightly higher",
+      waterNote:"Higher cardio volume means more sweat loss — don't under-salt.",
+      cardio:{1:"HIIT · 10 rounds — 30 s hard / 90 s easy",2:"LISS · 30 min",3:"LISS · 30 min",4:"LISS · 30 min",5:"LISS · 30 min",0:"LISS · 30 min"}},
+  p3:{chip:"Phase 3 · Sharpen", cls:"p3", title:"Phase 3 — Sharpen", range:"Week 11 · Mon 21 Sep → Sun 27 Sep",
+      water:"4–4.5 L", sodium:"Normal — keep it consistent",
+      waterNote:"Consistency matters more than amount here — no manipulating water or salt yet, that's event week only.",
+      cardio:{1:"HIIT · 10 rounds — 30 s hard / 90 s easy",2:"LISS · 30–35 min",3:"LISS · 30–35 min",4:"LISS · 30–35 min",5:"LISS · 30–35 min",0:"LISS · 30–35 min"}},
+  p4:{chip:"Event Week", cls:"p4", title:"Event Week", range:"Week 12 · Mon 28 Sep → Sat 3 Oct",
+      water:"", sodium:"", waterNote:"", cardio:{}},
+};
+
+/* meals: [name, detail, kcal, P, C, F]. {carb} slots swap by phase. */
+function mealsFor(phase, training){
+  const M1 = ["Meal 1 — Breakfast","250g Greek yoghurt (low-fat, plain) + 1 scoop whey + 150g frozen berries",345,50,30,3];
+  const PT = ["Pre-Training Meal","<b>2 bananas + 2 slices sourdough</b> — eat 60–90 min before your session",470,13,104,2];
+  const M2 = (rice,k,p,c,f)=>["Meal 2 — Lunch",`200g chicken breast + <b>${rice}g cooked rice</b> + veg`,k,p,c,f];
+  const M3 = (sp,k,p,c,f)=>["Meal 3 — Post-Training / Dinner Prep",`200g white fish + <b>${sp}g cooked sweet potato</b> + veg`,k,p,c,f];
+  const M4 = (alm,n,k,p,c,f)=>["Meal 4 — Dinner",`180g chicken breast + 2 whole eggs + veg + <b>1.5 tbsp olive oil (21g)</b> + <b>${alm}g almonds (~${n} almonds)</b>`,k,p,c,f];
+  const T = {
+    p1:{ tr:[M1,PT,M2(285,730,70,80,8),M3(380,590,54,80,4),M4(40,25,904,76,12,58)],
+         re:[M1,M2(220,645,68,61,8),M3(290,512,52,61,3),M4(55,35,990,80,15,65)] },
+    p2:{ tr:[M1,PT,M2(140,543,66,41,7),M3(190,419,50,41,3),M4(25,15,817,73,9,50)],
+         re:[M1,M2(110,506,65,31,7),M3(150,385,49,31,3),M4(30,18,846,74,10,53)] },
+    p3:{ tr:[M1,PT,M2(70,450,64,21,7),M3(90,333,48,21,3),M4(15,10,759,71,6,45)],
+         re:[M1,M2(75,459,64,23,7),M3(100,342,48,23,3),M4(30,18,846,74,10,53)] },
+  };
+  return T[phase][training ? "tr" : "re"];
+}
+const TARGETS = {
+  p1:{tr:"~2,750 kcal · 210g P · 300g C · 75g F", re:"~2,450 kcal · 210g P · 160g C · 80g F"},
+  p2:{tr:"~2,400 kcal · 210g P · 220g C · 65g F", re:"~2,050 kcal · 210g P · 100g C · 65g F"},
+  p3:{tr:"~2,200 kcal · 200g P · 180g C · 60g F", re:"~1,900 kcal · 200g P · 80g C · 65g F"},
+};
+
+/* Event week: keyed by day offset from event-week Monday (0 = Mon 28 Sep) */
+const EVENT_WEEK = [
+  { d:"Day −5", tag:"Deplete",
+    carbs:"Low — <b>~100g carbs</b> for the day. Use the Phase 2 rest-day meal amounts (110g rice at lunch, 150g sweet potato at Meal 3, 30g almonds at dinner) and keep all protein meals as normal. Skip the pre-training banana/sourdough meal.",
+    training:"Push A — normal session, but <b>drop the weight 20–30% and push reps to 15–20</b>. Goal is draining glycogen through volume, not strength.",
+    water:"High — 4–4.5 L as normal.", sodium:"Normal — don't restrict yet.", cardio:"Light walking only — no HIIT, no long cardio." },
+  { d:"Day −4", tag:"Deplete",
+    carbs:"Low — <b>~100g carbs</b>, same meal amounts as yesterday (Phase 2 rest-day portions). No pre-training meal.",
+    training:"Pull A — light weight (−20–30%), <b>15–20 reps</b>, high volume.",
+    water:"High — 4–4.5 L.", sodium:"Normal.", cardio:"Light walking only." },
+  { d:"Day −3", tag:"Last low day",
+    carbs:"<b>~100–120g carbs</b> — last low-carb day. Same portion template as Mon/Tue.",
+    training:"Legs A — <b>last full session of the week</b>. Light weight, 15–20 reps. After today, training is done or very light only.",
+    water:"Still high — 4–4.5 L.", sodium:"Still normal.", cardio:"Light walking only." },
+  { d:"Day −2", tag:"Carb load",
+    carbs:"<b>Load — 400–500g carbs</b> from clean sources: white rice, sweet potato, and the banana + sourdough combo. This refills the glycogen you drained Mon–Wed; glycogen pulls water <i>into</i> the muscle, which reads as full, not puffy.",
+    training:"<b>None</b>, or a very light pump-focused session only if you want it.",
+    water:"Keep high — 4–4.5 L.", sodium:"Normal — <b>don't cut yet</b>.", cardio:"Light walking only." },
+  { d:"Day −1", tag:"Dry out",
+    carbs:"<b>Moderate-high — 300–400g</b>, same clean sources. <b>Avoid high-fibre and gassy foods</b> — broccoli, legumes, large dairy serves — so you're not bloated tomorrow.",
+    training:"Rest.",
+    water:"<b>Taper down gradually</b> through the day — ease off, don't cut abruptly.",
+    sodium:"<b>Cut added salt from here.</b> No salt on food, no processed / salty / restaurant food. After days of normal sodium, dropping it now makes your body shed water from under the skin.",
+    cardio:"Light walking only.",
+    extra:"<b>Sleep is the priority tonight</b> — a bad night shows on your face and eyes more than almost anything else." },
+  { d:"EVENT DAY", tag:"Peak",
+    carbs:"Small feed <b>2–4 hours before</b> if you want extra fullness — <b>30–50g</b> from rice cakes, white rice or honey. Don't overdo it; a big meal now looks like bloat, not fullness.",
+    training:"<b>Pump-up 60–90 min before</b> the moment you want to look your best — bands or light weights, high reps, just enough blood in the muscle without fatigue.",
+    water:"<b>Small sips only</b> through the morning — tight, not bone dry. Real dehydration blurs definition and looks flat and unwell.",
+    sodium:"Stay low — no added salt.", cardio:"None.",
+    extra:"Enjoy it — you've earned this after 12 weeks." },
+];
+
+/* ============ DATE HELPERS ============ */
+const dayMS = 86400000;
+const utc = (y,m,d)=>Date.UTC(y,m-1,d);
+const startUTC = utc(START.y,START.m,START.d);
+function dayIndex(dt){ return Math.round((utc(dt.getFullYear(),dt.getMonth()+1,dt.getDate()) - startUTC)/dayMS); } // 0 = day 1
+function weekOf(idx){ return Math.floor(idx/7)+1; }
+function fmt(dt){ return `${DOW[dt.getDay()]} ${dt.getDate()} ${MON[dt.getMonth()]}`; }
+function iso(dt){ return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,"0")}-${String(dt.getDate()).padStart(2,"0")}`; }
+function phaseKeyForWeek(w){ return w<=6 ? "p1" : w<=10 ? "p2" : w===11 ? "p3" : "p4"; }
+
+/* ============ STATE / CHECKLIST ============ */
+let viewDate = new Date();
+function getChecks(dt){ try{ return JSON.parse(localStorage.getItem("p12-"+iso(dt))||"[]"); }catch(e){ return []; } }
+function setCheck(dt,id,on){
+  const k = "p12-"+iso(dt); let a = getChecks(dt);
+  if(on && !a.includes(id)) a.push(id);
+  if(!on) a = a.filter(x=>x!==id);
+  localStorage.setItem(k, JSON.stringify(a));
+}
+
+/* ============ RENDER HELPERS ============ */
+const esc = s=>s;
+function chkRow(id, title, sub, meta, checked, tag){
+  return `<div class="chk${checked?" on":""}" data-chk="${id}">
+    <div class="box"></div>
+    <div class="body">
+      <div class="t">${title}${tag?`<span class="tag">${tag}</span>`:""}</div>
+      ${sub?`<div class="s">${sub}</div>`:""}
+      ${meta?`<div class="m">${meta}</div>`:""}
+    </div>
+  </div>`;
+}
+function totalsGrid(k,p,c,f){
+  return `<div class="totals">
+    <div class="cell"><div class="v">${k.toLocaleString()}</div><div class="k">kcal</div></div>
+    <div class="cell"><div class="v">${p}g</div><div class="k">Protein</div></div>
+    <div class="cell"><div class="v">${c}g</div><div class="k">Carbs</div></div>
+    <div class="cell"><div class="v">${f}g</div><div class="k">Fat</div></div>
+  </div>`;
+}
+
+/* ============ TODAY VIEW ============ */
+function renderToday(){
+  const idx = dayIndex(viewDate);
+  const el = document.getElementById("todayView");
+  const chip = document.getElementById("phaseChip");
+  const dow = viewDate.getDay();
+  const checks = getChecks(viewDate);
+
+  /* header pieces */
+  document.getElementById("dateTitle").textContent = fmt(viewDate);
+  const isToday = iso(viewDate)===iso(new Date());
+  document.getElementById("todayBtn").classList.toggle("hidden", isToday);
+
+  /* before program */
+  if(idx < 0){
+    chip.textContent = "Pre-program"; chip.className = "phasechip";
+    document.getElementById("dateSub").textContent = "Program starts Mon 13 July";
+    document.getElementById("progBar").style.width = "0%";
+    document.getElementById("progLabel").textContent = "";
+    el.innerHTML = `
+      <div class="card center">
+        <div class="sub" style="margin-bottom:6px">Program starts in</div>
+        <div class="countnum">${-idx} day${idx===-1?"":"s"}</div>
+        <div class="sub" style="margin-top:6px">Monday 13 July → event day Saturday 3 October</div>
+      </div>
+      <div class="card">
+        <h2><span class="ic">🛒</span>Get ready — shopping list</h2>
+        ${chkRow("prep-1","Proteins","Chicken breast · white fish · eggs · low-fat Greek yoghurt · whey","",checks.includes("prep-1"))}
+        ${chkRow("prep-2","Carbs","White rice · sweet potato · bananas · sourdough · frozen berries","",checks.includes("prep-2"))}
+        ${chkRow("prep-3","Fats","Olive oil · almonds (or peanut butter / mixed nuts / avocado as swaps)","",checks.includes("prep-3"))}
+        ${chkRow("prep-4","Extras","Veg for every main meal · electrolyte tabs or salt for training days","",checks.includes("prep-4"))}
+        ${chkRow("prep-5","Kitchen scale","Portions are in exact grams — a scale removes all guessing","",checks.includes("prep-5"))}
+        ${chkRow("prep-6","Baseline photos + waist measurement","Same time of day, same lighting — you'll thank yourself in week 12","",checks.includes("prep-6"))}
+      </div>
+      <div class="card">
+        <h2><span class="ic">👁</span>Preview</h2>
+        <div class="sub">Use the arrows above to browse any day of the program — day 1 is Monday 13 July.</div>
+      </div>`;
+    bindChecks(el);
+    return;
+  }
+
+  /* after event */
+  if(idx >= TOTAL_DAYS){
+    chip.textContent = "Complete"; chip.className = "phasechip";
+    document.getElementById("dateSub").textContent = "Program complete";
+    document.getElementById("progBar").style.width = "100%";
+    document.getElementById("progLabel").textContent = "";
+    el.innerHTML = `
+      <div class="card center">
+        <div style="font-size:40px;margin-bottom:8px">🏆</div>
+        <div class="bigday">12 weeks. Done.</div>
+        <div class="sub" style="margin-top:8px">Eat normally, drink normally, rest up.<br>Reverse calories up gradually over the next couple of weeks rather than swinging straight into a surplus.</div>
+      </div>`;
+    return;
+  }
+
+  const week = weekOf(idx);
+  const pk = phaseKeyForWeek(week);
+  const P = PHASES[pk];
+  const isDeload = DELOAD_WEEKS.includes(week);
+  const dayNum = idx+1;
+
+  chip.textContent = P.chip; chip.className = "phasechip "+P.cls;
+  document.getElementById("dateSub").textContent = `Week ${week} of 12 · Day ${dayNum} of ${TOTAL_DAYS}`;
+  document.getElementById("progBar").style.width = Math.round(dayNum/TOTAL_DAYS*100)+"%";
+  document.getElementById("progLabel").textContent = Math.round(dayNum/TOTAL_DAYS*100)+"% complete";
+
+  /* ---- EVENT WEEK ---- */
+  if(pk==="p4"){
+    const ei = idx - 77; /* 0..6 (Mon..Sun of week 12) */
+    if(ei > 5){ /* Sunday after event */
+      el.innerHTML = `<div class="card center"><div style="font-size:40px;margin-bottom:8px">🏆</div>
+        <div class="bigday">It's done.</div>
+        <div class="sub" style="margin-top:8px">Rest, eat and drink normally again.</div></div>`;
+      return;
+    }
+    const E = EVENT_WEEK[ei];
+    const isEventDay = ei===5;
+    el.innerHTML = `
+      ${isEventDay
+        ? `<div class="banner green"><b>🏁 EVENT DAY</b>Tight, full, dry — everything this week was for today. Keep it calm and simple.</div>`
+        : `<div class="banner red"><b>Event week — ${E.d} · ${E.tag}</b>Small, deliberate manipulations only. Follow today exactly; don't freelance extras.</div>`}
+      <div class="card">
+        <h2><span class="ic">🍚</span>Carbs & food</h2>
+        <div class="sub" style="color:var(--text)">${E.carbs}</div>
+      </div>
+      <div class="card">
+        <h2><span class="ic">🏋️</span>Training</h2>
+        <div class="sub" style="color:var(--text)">${E.training}</div>
+      </div>
+      <div class="card">
+        <h2><span class="ic">💧</span>Water & sodium</h2>
+        <div class="statgrid">
+          <div class="stat"><div class="v">Water</div><div class="k">${E.water}</div></div>
+          <div class="stat"><div class="v">Sodium</div><div class="k">${E.sodium}</div></div>
+        </div>
+        <div class="note">Cardio: ${E.cardio}</div>
+      </div>
+      ${E.extra?`<div class="card"><h2><span class="ic">⭐</span>Priority</h2><div class="sub" style="color:var(--text)">${E.extra}</div></div>`:""}
+      <div class="banner amber"><b>Safety line</b>If you feel genuinely unwell at any point — dizzy, disoriented, racing heart, severe cramping — stop the protocol, drink water normally and eat normally. One day is never worth your health.</div>`;
+    bindChecks(el);
+    return;
+  }
+
+  /* ---- NORMAL WEEKS ---- */
+  const training = dow !== 0;
+  const S = training ? SESSIONS[dow] : null;
+  const meals = mealsFor(pk, training);
+  const tot = meals.reduce((a,m)=>[a[0]+m[2],a[1]+m[3],a[2]+m[4],a[3]+m[5]],[0,0,0,0]);
+  const cardio = P.cardio[dow];
+  const parts = [];
+
+  if(isDeload){
+    parts.push(`<div class="banner amber"><b>⚠️ Deload week — non-negotiable</b>
+      Cut sets ~40% (4 sets → 2–3), keep weights around 70% of normal, stay a few reps short of failure. Same split, lighter and shorter sessions. This protects joints, CNS and hormones — skipping it is how people burn out around week 8–9.</div>`);
+  }
+
+  /* training card */
+  if(training){
+    const rows = S.ex.map(e=>`<tr><td>${e[0]}</td><td>${e[1]}</td></tr>`).join("");
+    parts.push(`<div class="card">
+      <h2><span class="ic">🏋️</span>Today's session</h2>
+      <h3>${S.name}${isDeload?'<span class="tag" style="color:var(--amber);border-color:rgba(251,191,36,.4)">Deload</span>':""}</h3>
+      <div class="sub">${S.focus}</div>
+      <table style="margin-top:10px"><tr><th>Exercise</th><th>Sets × Reps</th></tr>${rows}</table>
+      ${isDeload?`<div class="note" style="color:#fde68a">Deload: run 2–3 sets per exercise at ~70% of usual weight, well short of failure.</div>`:""}
+      <details><summary>Effort, rests & progression</summary><div class="inner"><ul>
+        <li><b>Effort:</b> RPE 8–9 — leave 1–2 reps in the tank on most sets. True failure only on a final set, and only when recovering well.</li>
+        <li><b>Rest:</b> 2–3 min on compounds · 60–90 s on isolation.</li>
+        <li><b>Progression:</b> beat last week — one more rep at the same weight, or same reps slightly heavier. Log every set.</li>
+        <li>If a lift stalls 2+ sessions, that's normal in a deficit — hold the weight and keep the reps clean.</li>
+      </ul></div></details>
+    </div>`);
+  } else {
+    parts.push(`<div class="card">
+      <h2><span class="ic">🛋</span>Today's session</h2>
+      <h3>Rest day</h3>
+      <div class="sub">Full rest from weights. ${cardio ? "Cardio still on — see below." : ""} Weekly check-in day: waist measurement + progress photos, same time and lighting as last week.</div>
+    </div>`);
+  }
+
+  /* cardio */
+  if(cardio){
+    parts.push(`<div class="card">
+      <h2><span class="ic">🏃</span>Cardio</h2>
+      ${chkRow("cardio", cardio, cardio.startsWith("HIIT")
+        ? "Short and hard — 10 × (30 s hard / 90 s easy). Stacks on today's push session."
+        : "Separate session from weights — a fasted morning walk is ideal. Don't tack it onto the end of lifting.","",checks.includes("cardio"))}
+    </div>`);
+  }
+
+  /* meals */
+  const mealRows = meals.map((m,i)=>chkRow("meal"+i, m[0], m[1], `${m[2]} kcal · ${m[3]}g P · ${m[4]}g C · ${m[5]}g F`, checks.includes("meal"+i))).join("");
+  parts.push(`<div class="card">
+    <h2><span class="ic">🍽</span>Meals — ${training?"training day":"rest day"}</h2>
+    ${mealRows}
+    ${totalsGrid(Math.round(tot[0]),Math.round(tot[1]),Math.round(tot[2]),Math.round(tot[3]))}
+    <div class="targetline">Phase target: ${TARGETS[pk][training?"tr":"re"]}. Protein runs 30–40g over target by design — it's a buffer, not a mistake. Hit protein and watch the scale trend; don't chase calories to the digit.</div>
+    <details><summary>Swaps & notes</summary><div class="inner"><ul>
+      <li>Olive oil is capped at 1.5 tbsp/day (used to cook Meal 4) — the rest of the fat comes from almonds because they're easy to actually eat.</li>
+      <li>Not into almonds? Swap roughly gram-for-gram with peanut butter, mixed nuts, or half an avocado.</li>
+      <li>Veg with every main meal, salt to taste (this phase).</li>
+    </ul></div></details>
+  </div>`);
+
+  /* hydration */
+  parts.push(`<div class="card">
+    <h2><span class="ic">💧</span>Hydration & electrolytes</h2>
+    <div class="statgrid">
+      <div class="stat"><div class="v">${P.water}</div><div class="k">Water today</div></div>
+      <div class="stat"><div class="v">Sodium</div><div class="k">${P.sodium}</div></div>
+    </div>
+    <div class="note">${P.waterNote} A pinch of salt in water or a low-sugar electrolyte tab on hard or hot days is smart. Feeling flat or fatigued as carbs drop is usually water + electrolytes, not the diet failing. Persistent cramps, dizziness or headaches = add water and salt back, don't push through.</div>
+  </div>`);
+
+  /* daily habits */
+  parts.push(`<div class="card">
+    <h2><span class="ic">✅</span>Daily non-negotiables</h2>
+    ${chkRow("h-sleep","Sleep 7.5–9 hours","The single biggest lever for keeping muscle in a deficit","",checks.includes("h-sleep"))}
+    ${chkRow("h-steps","8,000–10,000 steps","Outside of training","",checks.includes("h-steps"))}
+    ${chkRow("h-weigh","Morning weigh-in","Daily — trends matter, single readings bounce with carb cycling","",checks.includes("h-weigh"))}
+    ${dow===0?chkRow("h-photos","Weekly photos + waist measurement","Same time of day, same lighting as last week","",checks.includes("h-photos")):""}
+  </div>`);
+
+  el.innerHTML = parts.join("");
+  bindChecks(el);
+}
+
+function bindChecks(root){
+  root.querySelectorAll("[data-chk]").forEach(n=>{
+    n.addEventListener("click",()=>{
+      const on = !n.classList.contains("on");
+      n.classList.toggle("on",on);
+      setCheck(viewDate, n.dataset.chk, on);
+    });
+  });
+}
+
+/* ============ PLAN VIEW ============ */
+function renderPlan(){
+  const idx = dayIndex(new Date());
+  const curWeek = (idx>=0 && idx<TOTAL_DAYS) ? weekOf(idx) : 0;
+  const curPk = curWeek ? phaseKeyForWeek(curWeek) : "";
+  const el = document.getElementById("planView");
+
+  const block = (pk,items)=>`
+    <div class="phaseblock${curPk===pk?" active":""}">
+      <div class="pt">${PHASES[pk].title}${curPk===pk?'<span class="nowtag">NOW</span>':""}</div>
+      <div class="pd">${PHASES[pk].range}</div>
+      <ul>${items.map(i=>`<li>${i}</li>`).join("")}</ul>
+    </div>`;
+
+  el.innerHTML = `
+    <div class="card">
+      <h2><span class="ic">🗓</span>The 12 weeks at a glance</h2>
+      ${block("p1",[
+        "Small deficit — recomposition while holding strength",
+        "Train 6×/week · cardio 3×/week (Tue, Thu, Sun · 25–30 min LISS)",
+        "Water 3.5–4 L · sodium normal",
+        "Deload: week 4 (Mon 3 – Sun 9 Aug)"])}
+      ${block("p2",[
+        "Calories tighten (~2,400 training / ~2,050 rest)",
+        "Cardio rises: LISS 30 min Tue–Fri + Sun, plus 1 HIIT on a push day",
+        "Water 4–4.5 L · don't under-salt",
+        "Deload: week 8 (Mon 31 Aug – Sun 6 Sep)"])}
+      ${block("p3",[
+        "Final sharpen (~2,200 training / ~1,900 rest)",
+        "Heaviest cardio week: 5× LISS 30–35 min + 1 HIIT — full training intensity, no taper",
+        "Keep water and sodium consistent — no manipulation yet"])}
+      ${block("p4",[
+        "Mon–Wed: carbs ~100g, light-weight high-rep training, water & sodium normal",
+        "Thu: carb load 400–500g, little/no training",
+        "Fri: carbs 300–400g, cut added salt, taper water, sleep well",
+        "Sat 3 Oct: sips only, small carb feed 2–4 h out, pump 60–90 min out — event day 🏁"])}
+    </div>
+
+    <div class="card">
+      <h2><span class="ic">🏋️</span>Weekly split (all 12 weeks)</h2>
+      <table>
+        <tr><th>Day</th><th>Session</th></tr>
+        <tr><td>Monday</td><td>Push A — chest/shoulders/triceps</td></tr>
+        <tr><td>Tuesday</td><td>Pull A — back/biceps</td></tr>
+        <tr><td>Wednesday</td><td>Legs A — quads/hams/glutes/calves</td></tr>
+        <tr><td>Thursday</td><td>Push B — chest/shoulders/triceps</td></tr>
+        <tr><td>Friday</td><td>Pull B — back/biceps</td></tr>
+        <tr><td>Saturday</td><td>Legs B — quads/hams/glutes/calves</td></tr>
+        <tr><td>Sunday</td><td>Off — full rest</td></tr>
+      </table>
+      <div class="note">A and B use different exercises/rep ranges so you're not repeating identical sessions — also easier on the joints over 12 straight weeks. Compounds 6–10 reps · isolation 10–15 · RPE 8–9 · rest 2–3 min compounds, 60–90 s isolation.</div>
+    </div>
+
+    <div class="card">
+      <h2><span class="ic">🍽</span>How the meals work</h2>
+      <div class="sub" style="color:var(--text)">Same 4 fixed meals every day (+ a pre-training meal on training days). The only things that change by phase are the <b>rice</b> at Meal 2, the <b>sweet potato</b> at Meal 3, and the <b>almonds</b> at Meal 4. The Today tab always shows the exact grams for the current phase — zero guessing.</div>
+      <table style="margin-top:10px">
+        <tr><th>Meal</th><th>Fixed base</th></tr>
+        <tr><td>Meal 1</td><td style="text-align:left;color:var(--mut)">250g Greek yoghurt + whey + 150g berries</td></tr>
+        <tr><td>Pre-training</td><td style="text-align:left;color:var(--mut)">2 bananas + 2 slices sourdough</td></tr>
+        <tr><td>Meal 2</td><td style="text-align:left;color:var(--mut)">200g chicken + rice + veg</td></tr>
+        <tr><td>Meal 3</td><td style="text-align:left;color:var(--mut)">200g white fish + sweet potato + veg</td></tr>
+        <tr><td>Meal 4</td><td style="text-align:left;color:var(--mut)">180g chicken + 2 eggs + veg + oil + almonds</td></tr>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2><span class="ic">📈</span>Rules that don't change</h2>
+      <div class="phaseblock"><ul>
+        <li><b>Progress every session</b> — one more rep, or same reps slightly heavier. Log everything.</li>
+        <li><b>Sleep 7.5–9 h</b> — the biggest muscle-retention lever there is.</li>
+        <li><b>8–10k steps daily</b> outside training.</li>
+        <li><b>Weigh daily, judge weekly</b> — carb cycling bounces the scale day to day; only trends count.</li>
+        <li><b>Photos + waist every Sunday</b> — same time, same lighting.</li>
+        <li><b>Deloads in weeks 4 and 8</b> are part of the program, not optional.</li>
+        <li>Consistently sore, flat or unmotivated for 3–4+ days = take an extra rest day or bring the deload forward.</li>
+      </ul></div>
+    </div>
+
+    <div class="banner amber"><b>The one important caution</b>
+    Peak week is a few days of smart carb/sodium timing — never near-zero water, diuretics or aggressive dehydration. The extreme version is where people get hurt, and it doesn't even look better. Feeling genuinely unwell = stop, drink, eat, done.</div>
+
+    <div class="proglabel" style="text-align:center;padding:18px 0 4px">Mon 13 July → Sat 3 October 2026 · built for one athlete, no fluff</div>
+  `;
+}
+
+/* ============ NAV / TABS ============ */
+function shiftDay(n){ viewDate = new Date(viewDate.getFullYear(), viewDate.getMonth(), viewDate.getDate()+n); renderToday(); }
+document.getElementById("prevBtn").addEventListener("click",()=>shiftDay(-1));
+document.getElementById("nextBtn").addEventListener("click",()=>shiftDay(1));
+document.getElementById("todayBtn").addEventListener("click",()=>{ viewDate = new Date(); renderToday(); });
+
+const tabT = document.getElementById("tabToday"), tabP = document.getElementById("tabPlan");
+tabT.addEventListener("click",()=>{
+  tabT.classList.add("active"); tabP.classList.remove("active");
+  document.getElementById("todayView").classList.remove("hide");
+  document.getElementById("planView").classList.add("hide");
+  document.getElementById("dateNav").style.display="flex";
+  window.scrollTo(0,0);
+});
+tabP.addEventListener("click",()=>{
+  tabP.classList.add("active"); tabT.classList.remove("active");
+  document.getElementById("planView").classList.remove("hide");
+  document.getElementById("todayView").classList.add("hide");
+  document.getElementById("dateNav").style.display="none";
+  renderPlan(); window.scrollTo(0,0);
+});
+
+/* refresh when app is reopened on a new day */
+document.addEventListener("visibilitychange",()=>{
+  if(!document.hidden){ const t=new Date(); if(iso(t)!==iso(viewDate) && iso(viewDate)===localStorage.getItem("p12-lastday")){ viewDate=t; renderToday(); } localStorage.setItem("p12-lastday", iso(t)); }
+});
+localStorage.setItem("p12-lastday", iso(new Date()));
+
+renderToday();
+renderPlan();
+</script>
+</body>
+</html>
