@@ -301,15 +301,13 @@ const M1_MEAL = meal("Meal 1 — Breakfast","250g full-fat Greek yoghurt + 1 sco
 const M4_MEAL = meal("Meal 4 — Dinner","180g chicken breast + 2 whole eggs + veg", N.m4);
 
 function mealsFor(pk, dow){
-  const rest = dow===0;
+  const rest = !LIFT_DOWS.includes(dow);            // Wed, Sat, Sun — every non-lifting day eats rest-day amounts
   const [rice, sp] = CARBS[pk][rest?"re":"tr"];
   const m2p = M2_ROT[dow];
-  const m3p = rest ? (pk==="p1"?"salmon":"fish") : M3_ROT[dow];
+  const m3p = dow===0 ? (pk==="p1"?"salmon":"fish") : M3_ROT[dow];
   const out = [M1_MEAL];
   if(!rest){
-    out.push(LIFT_DOWS.includes(dow)
-      ? meal("Pre-Training Meal","<b>2 bananas + 2 slices sourdough</b> — eat 60–90 min before your session", N.pt)
-      : meal("Mid-Morning Meal","<b>2 bananas + 2 slices sourdough</b> — no session today, have it mid-morning (before LISS if you're doing cardio)", N.pt));
+    out.push(meal("Pre-Training Meal","<b>2 bananas + 2 slices sourdough</b> — eat 60–90 min before your session", N.pt));
   }
   out.push(meal("Meal 2 — Lunch",`${PROT_LABEL[m2p]} + <b>${rice}g cooked rice</b> + veg`, N[m2p], riceN(rice)));
   out.push(meal("Meal 3 — Dinner Prep",`${PROT_LABEL[m3p]} + <b>${sp}g cooked sweet potato</b> + veg`, N[m3p], spN(sp)));
@@ -673,8 +671,8 @@ function renderToday(){
     </div>`);
   }
 
-  parts.push(mealsCard(meals, checks, `Meals — ${dow===0?"rest day":"full day"}`,
-    `Phase target: ${TARGETS[pk][dow===0?"re":"tr"]}. Protein lands high by design and all fat comes from the food itself — salmon, beef, eggs, yoghurt. No added oils or nuts anywhere.`,
+  parts.push(mealsCard(meals, checks, `Meals — ${lifting?"training day":"rest day"}`,
+    `Phase target: ${TARGETS[pk][lifting?"tr":"re"]}. Protein lands high by design and all fat comes from the food itself — salmon, beef, eggs, yoghurt. No added oils or nuts anywhere.`,
     true,
     `<details><summary>Cooking & notes</summary><div class="inner"><ul>
       <li>Cook without added oil — non-stick pan, air fryer, grill or bake. If you do use any, count it.</li>
@@ -829,12 +827,12 @@ function renderPlan(){
         "Water 3.5–4 L · sodium normal",
         "Deload: week 4 (Mon 3 – Sun 9 Aug)"])}
       ${block("p2",[
-        "Calories tighten (~2,450–2,545 training / ~1,905 rest)",
+        "Calories tighten (~2,450–2,545 training / ~1,825–1,910 rest)",
         "Cardio rises: LISS Tue/Wed/Thu/Sun + HIIT on Monday's Upper A",
         "Water 4–4.5 L · don't under-salt",
         "Deload: week 8 (Mon 31 Aug – Sun 6 Sep)"])}
       ${block("p3",[
-        "Final sharpen (~2,270–2,365 training / ~1,820 rest)",
+        "Final sharpen (~2,270–2,365 training / ~1,735–1,820 rest)",
         "Heaviest cardio week: LISS ×5 (Tue/Wed/Thu/Sat/Sun, 30–35 min) + Monday HIIT",
         "Keep water and sodium consistent — no manipulation yet"])}
       ${block("p4",[
@@ -861,21 +859,22 @@ function renderPlan(){
 
     <div class="card">
       <h2><span class="ic">🍽</span>How the meals work</h2>
-      <div class="sub" style="color:var(--text)">Meals 1 and 4 are fixed every day. Meals 2 and 3 rotate on a fixed weekly pattern so it's never the same plate two days running — fat comes entirely from the food itself (salmon, beef, eggs, full-fat yoghurt), nothing added on top. Only the rice and sweet potato amounts change by phase. The Today tab always shows the exact grams — zero guessing.</div>
+      <div class="sub" style="color:var(--text)">Meals 1 and 4 are fixed every day. Meals 2 and 3 rotate on a fixed weekly pattern so it's never the same plate two days running — fat comes entirely from the food itself (salmon, beef, eggs, full-fat yoghurt), nothing added on top. Training days (Mon/Tue/Thu/Fri) carry full carbs plus the pre-training meal; rest days (Wed/Sat/Sun) run the lower rest-day amounts with no carb meal. The Today tab always shows the exact grams — zero guessing.</div>
       <table style="margin-top:10px">
         <tr><th>Day</th><th>Meal 2 · Meal 3</th></tr>
-        <tr><td>Mon & Fri</td><td style="text-align:left;color:var(--mut)">Chicken · Salmon</td></tr>
-        <tr><td>Tue, Thu & Sat</td><td style="text-align:left;color:var(--mut)">Beef mince · White fish</td></tr>
-        <tr><td>Wednesday</td><td style="text-align:left;color:var(--mut)">Chicken · Smoked salmon</td></tr>
-        <tr><td>Sunday (rest)</td><td style="text-align:left;color:var(--mut)">Beef mince · Salmon (P1) / White fish (P2–3)</td></tr>
+        <tr><td>Mon & Fri (train)</td><td style="text-align:left;color:var(--mut)">Chicken · Salmon</td></tr>
+        <tr><td>Tue & Thu (train)</td><td style="text-align:left;color:var(--mut)">Beef mince · White fish</td></tr>
+        <tr><td>Wed (rest)</td><td style="text-align:left;color:var(--mut)">Chicken · Smoked salmon</td></tr>
+        <tr><td>Sat (rest)</td><td style="text-align:left;color:var(--mut)">Beef mince · White fish</td></tr>
+        <tr><td>Sun (rest)</td><td style="text-align:left;color:var(--mut)">Beef mince · Salmon (P1) / White fish (P2–3)</td></tr>
       </table>
       <table style="margin-top:12px">
         <tr><th>Fixed</th><th>Base</th></tr>
         <tr><td>Meal 1</td><td style="text-align:left;color:var(--mut)">250g full-fat Greek yoghurt + whey + berries</td></tr>
-        <tr><td>Carb meal (Mon–Sat)</td><td style="text-align:left;color:var(--mut)">2 bananas + 2 slices sourdough</td></tr>
+        <tr><td>Pre-training meal (lifting days only)</td><td style="text-align:left;color:var(--mut)">2 bananas + 2 slices sourdough</td></tr>
         <tr><td>Meal 4</td><td style="text-align:left;color:var(--mut)">180g chicken + 2 eggs + veg</td></tr>
       </table>
-      <div class="note">The carb meal is pre-training on lifting days and mid-morning on Wed/Sat. Sunday runs rest-day amounts with no carb meal. Event week has its own day-by-day meal plan, shown in full in the Today view.</div>
+      <div class="note">Event week has its own day-by-day meal plan, shown in full in the Today view.</div>
     </div>
 
     <div class="card">
