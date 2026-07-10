@@ -625,13 +625,19 @@ function renderToday(){
 
   if(isDeload){
     parts.push(`<div class="banner amber"><b>⚠️ Deload week — non-negotiable</b>
-      Drop a set from each exercise (3 → 2), keep weights around 70% of normal, stay a few reps short of failure. Same split, lighter and shorter sessions. This protects joints, CNS and hormones — skipping it is how people burn out around week 8–9.</div>`);
+      The session table below already shows the reduced sets — nothing to work out. Just drop to ~70% of your normal weights and stay a few reps short of failure. This protects joints, CNS and hormones — skipping it is how people burn out around week 8–9.</div>`);
   }
 
   if(lifting){
-    parts.push(sessionCard(SESSIONS[dow], {
+    const S = isDeload
+      ? {...SESSIONS[dow], ex: SESSIONS[dow].ex.map(([e,s])=>{
+          const m = s.match(/^(\d+)(\s*×.*)$/);
+          return [e, m ? Math.max(1,parseInt(m[1])-1)+m[2] : s];
+        })}
+      : SESSIONS[dow];
+    parts.push(sessionCard(S, {
       tag: isDeload ? "Deload" : "",
-      extraNote: isDeload ? `<div class="note" style="color:#fde68a">Deload: drop a set from each exercise at ~70% of usual weight, well short of failure.</div>` : "",
+      extraNote: isDeload ? `<div class="note" style="color:#fde68a">Sets already reduced for the deload — run everything at ~70% of your usual weights, well short of failure.</div>` : "",
       details: `<details><summary>Effort, rests & progression</summary><div class="inner"><ul>
         <li><b>Volume:</b> ${SESSION_NOTE}</li>
         <li><b>Effort:</b> RPE 8–9 — leave 1–2 reps in the tank on most sets. True failure only on a final set, and only when recovering well.</li>
@@ -919,6 +925,9 @@ document.addEventListener("visibilitychange",()=>{
   if(!document.hidden){ const t=new Date(); if(iso(t)!==iso(viewDate) && iso(viewDate)===localStorage.getItem("p12-lastday")){ viewDate=t; renderToday(); } localStorage.setItem("p12-lastday", iso(t)); }
 });
 localStorage.setItem("p12-lastday", iso(new Date()));
+
+/* offline: cache the app on-device so it opens with zero signal */
+if("serviceWorker" in navigator){ navigator.serviceWorker.register("./sw.js").catch(()=>{}); }
 
 renderToday();
 </script>
