@@ -122,20 +122,26 @@
   .stat .v{font-weight:800;font-size:17px}
   .stat .k{font-size:11px;color:var(--mut);margin-top:2px}
 
-  /* weigh-in input */
-  .winput{display:flex;gap:8px;align-items:center;margin-top:8px}
+  /* weigh-in card (top of day) */
+  .weighcard{display:flex;align-items:center;gap:14px}
+  .weighcard .wico{flex:none;width:44px;height:44px;border-radius:14px;background:var(--accdim);
+    display:flex;align-items:center;justify-content:center;font-size:20px}
+  .weighcard .wmain{flex:1}
+  .weighcard .wt{font-weight:800;font-size:15px}
+  .weighcard .ws{font-size:12px;color:var(--mut);margin-top:1px}
+  .winput{display:flex;gap:8px;align-items:center;margin-top:10px}
   .winput input{
-    flex:1;max-width:110px;background:var(--card2);border:1px solid var(--line);border-radius:10px;
-    color:var(--text);font-size:16px;font-weight:700;padding:8px 10px;text-align:center;
+    flex:1;max-width:120px;background:var(--card2);border:1px solid var(--line);border-radius:10px;
+    color:var(--text);font-size:17px;font-weight:800;padding:9px 10px;text-align:center;
     font-variant-numeric:tabular-nums;-webkit-appearance:none;appearance:none;
   }
   .winput input:focus{outline:none;border-color:var(--acc)}
   .winput .unit{color:var(--dim);font-size:13px;font-weight:700}
   .winput button{
     border:none;background:var(--acc);color:#0a0d12;font-weight:800;font-size:13px;
-    padding:9px 14px;border-radius:10px;cursor:pointer;
+    padding:10px 16px;border-radius:10px;cursor:pointer;
   }
-  .wlogged{font-size:12.5px;color:var(--acc);font-weight:700;margin-top:6px}
+  .wdeltatag{font-size:12px;font-weight:700;margin-top:7px}
 
   /* weight view */
   .wstatgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
@@ -219,41 +225,35 @@
 <script>
 "use strict";
 
-/* ============ PROGRAM DATA ============ */
+/* ============ PROGRAM CONSTANTS ============ */
 
 const START = {y:2026, m:7, d:9};            // commenced Thu 9 July 2026 (day 1)
-const DOCW0 = {y:2026, m:7, d:13};           // Mon 13 July — anchor for week numbering (week 1, Mon-aligned)
+const DOCW0 = {y:2026, m:7, d:13};           // Mon 13 July — anchor for week numbering (Mon-aligned)
 const EVENTMON = {y:2026, m:9, d:28};        // Mon 28 Sep — event week begins
 const TOTAL_DAYS = 87;                        // Thu 9 Jul → Sat 3 Oct (event day)
 const DELOAD_WEEKS = [4, 8];
+const LIFT_DOWS = [1,2,4,5];                  // Mon, Tue, Thu, Fri
 const DOW = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
 const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
+/* ---- Training: Upper/Lower ×2 ---- */
 const SESSIONS = {
-  1:{name:"Push A", focus:"Chest · Shoulders · Triceps", ex:[
-    ["Barbell or DB bench press","4 × 8–10"],["Incline DB press","3 × 10–12"],
-    ["Seated shoulder press","3 × 10"],["Lateral raises","3 × 15"],
-    ["Triceps pushdown","3 × 12"],["Overhead triceps extension","2 × 12"]]},
-  2:{name:"Pull A", focus:"Back · Biceps", ex:[
-    ["Deadlift or rack pull","3 × 6–8"],["Lat pulldown or pull-ups","4 × 8–10"],
-    ["Seated cable row","3 × 10"],["Face pulls","3 × 15"],
-    ["Barbell curl","3 × 10"],["Hammer curl","2 × 12"]]},
-  3:{name:"Legs A", focus:"Quads · Hams · Glutes · Calves", ex:[
-    ["Squat","4 × 6–8"],["Romanian deadlift","3 × 10"],["Leg press","3 × 12"],
-    ["Leg curl","3 × 12"],["Walking lunges","2 × 12/leg"],["Calf raises","4 × 15"]]},
-  4:{name:"Push B", focus:"Chest · Shoulders · Triceps", ex:[
-    ["Incline barbell press","4 × 8–10"],["Flat DB press","3 × 10–12"],
-    ["DB shoulder press","3 × 10"],["Cable lateral raises","3 × 15"],
-    ["Dips (weighted if possible)","3 × 10"],["Rope pushdown","2 × 15"]]},
-  5:{name:"Pull B", focus:"Back · Biceps", ex:[
-    ["Barbell row","4 × 8–10"],["Single-arm DB row","3 × 10–12"],
-    ["Wide-grip pulldown","3 × 10"],["Rear delt fly","3 × 15"],
-    ["Preacher curl","3 × 10"],["Cable curl","2 × 12"]]},
-  6:{name:"Legs B", focus:"Quads · Hams · Glutes · Calves", ex:[
-    ["Front squat or hack squat","4 × 8–10"],["Stiff-leg deadlift","3 × 10"],
-    ["Leg extension","3 × 15"],["Seated leg curl","3 × 12"],
-    ["Bulgarian split squat","2 × 10/leg"],["Standing calf raise","4 × 15"]]},
+  1:{name:"Upper A", focus:"Chest · Back · Shoulders · Arms", ex:[
+    ["Chest Press","3 × 6–8"],["Back Row","3 × 8–10"],["Shoulder Press","3 × 8–10"],
+    ["Back Pulldown","3 × 10–12"],["Shoulder Raise","2 × 15"],
+    ["Bicep Curl","2 × 10"],["Tricep Extension","2 × 12"]]},
+  2:{name:"Lower A", focus:"Quads · Hams · Glutes · Calves", ex:[
+    ["Quad Squat","3 × 6–8"],["Hamstring Hinge","3 × 10"],["Quad Press","3 × 12"],
+    ["Hamstring Curl","2 × 12"],["Glute Lunge","2 × 12/leg"],["Calf Raise","3 × 15"]]},
+  4:{name:"Upper B", focus:"Chest · Back · Shoulders · Arms", ex:[
+    ["Chest Press","3 × 8–10"],["Back Pulldown","3 × 8–10"],["Shoulder Press","3 × 10"],
+    ["Back Row","3 × 10–12"],["Shoulder Fly (rear delt)","2 × 15"],
+    ["Bicep Curl","2 × 12"],["Tricep Extension","2 × 12"]]},
+  5:{name:"Lower B", focus:"Quads · Hams · Glutes · Calves", ex:[
+    ["Quad Squat","3 × 8–10"],["Hamstring Hinge","3 × 10"],["Quad Extension","2 × 15"],
+    ["Hamstring Curl","2 × 12"],["Glute Lunge","2 × 10/leg"],["Calf Raise","3 × 15"]]},
 };
+const SESSION_NOTE = "2–3 sets per exercise, max — lower volume, higher quality. Make every set count.";
 
 const PHASES = {
   p1:{chip:"Phase 1 · Recomp", cls:"", title:"Phase 1 — Recomp", range:"Commenced Thu 9 Jul → Sun 23 Aug",
@@ -263,90 +263,118 @@ const PHASES = {
   p2:{chip:"Phase 2 · Tighten", cls:"p2", title:"Phase 2 — Tighten", range:"Weeks 7–10 · Mon 24 Aug → Sun 20 Sep",
       water:"4–4.5 L", sodium:"Normal to slightly higher",
       waterNote:"Higher cardio volume means more sweat loss — don't under-salt.",
-      cardio:{1:"HIIT · 10 rounds — 30 s hard / 90 s easy",2:"LISS · 30 min",3:"LISS · 30 min",4:"LISS · 30 min",5:"LISS · 30 min",0:"LISS · 30 min"}},
+      cardio:{1:"HIIT · 10 rounds — 30 s hard / 90 s easy",2:"LISS · 30 min",3:"LISS · 30 min",4:"LISS · 30 min",0:"LISS · 30 min"}},
   p3:{chip:"Phase 3 · Sharpen", cls:"p3", title:"Phase 3 — Sharpen", range:"Week 11 · Mon 21 Sep → Sun 27 Sep",
       water:"4–4.5 L", sodium:"Normal — keep it consistent",
       waterNote:"Consistency matters more than amount here — no manipulating water or salt yet, that's event week only.",
-      cardio:{1:"HIIT · 10 rounds — 30 s hard / 90 s easy",2:"LISS · 30–35 min",3:"LISS · 30–35 min",4:"LISS · 30–35 min",5:"LISS · 30–35 min",0:"LISS · 30–35 min"}},
+      cardio:{1:"HIIT · 10 rounds — 30 s hard / 90 s easy",2:"LISS · 30–35 min",3:"LISS · 30–35 min",4:"LISS · 30–35 min",6:"LISS · 30–35 min",0:"LISS · 30–35 min"}},
   p4:{chip:"Event Week", cls:"p4", title:"Event Week", range:"Week 12 · Mon 28 Sep → Sat 3 Oct",
       water:"", sodium:"", waterNote:"", cardio:{}},
 };
 
-/* meals: [name, detail, kcal, P, C, F] */
-function mealsFor(phase, training){
-  const M1 = ["Meal 1 — Breakfast","250g Greek yoghurt (low-fat, plain) + 1 scoop whey + 150g frozen berries",345,50,30,3];
-  const PT = ["Pre-Training Meal","<b>2 bananas + 2 slices sourdough</b> — eat 60–90 min before your session",470,13,104,2];
-  const M2 = (rice,k,p,c,f)=>["Meal 2 — Lunch",`200g chicken breast + <b>${rice}g cooked rice</b> + veg`,k,p,c,f];
-  const M3 = (sp,k,p,c,f)=>["Meal 3 — Post-Training / Dinner Prep",`200g white fish + <b>${sp}g cooked sweet potato</b> + veg`,k,p,c,f];
-  const M4 = (alm,n,k,p,c,f)=>["Meal 4 — Dinner",`180g chicken breast + 2 whole eggs + veg + <b>1.5 tbsp olive oil (21g)</b> + <b>${alm}g almonds (~${n} almonds)</b>`,k,p,c,f];
-  const T = {
-    p1:{ tr:[M1,PT,M2(285,730,70,80,8),M3(380,590,54,80,4),M4(40,25,904,76,12,58)],
-         re:[M1,M2(220,645,68,61,8),M3(290,512,52,61,3),M4(55,35,990,80,15,65)] },
-    p2:{ tr:[M1,PT,M2(140,543,66,41,7),M3(190,419,50,41,3),M4(25,15,817,73,9,50)],
-         re:[M1,M2(110,506,65,31,7),M3(150,385,49,31,3),M4(30,18,846,74,10,53)] },
-    p3:{ tr:[M1,PT,M2(70,450,64,21,7),M3(90,333,48,21,3),M4(15,10,759,71,6,45)],
-         re:[M1,M2(75,459,64,23,7),M3(100,342,48,23,3),M4(30,18,846,74,10,53)] },
-  };
-  return T[phase][training ? "tr" : "re"];
+/* ============ NUTRITION (composed from food data — sums always add up) ============ */
+const N = {
+  m1:     {k:438,p:48,  c:31, f:15},    // 250g full-fat Greek yoghurt + whey + 150g berries
+  pt:     {k:470,p:13,  c:104,f:2},     // 2 bananas + 2 slices sourdough
+  m4:     {k:483,p:68,  c:3,  f:16.5},  // 180g chicken + 2 eggs + veg
+  chicken:{k:360,p:62,  c:2,  f:7},     // 200g chicken breast + veg
+  beef:   {k:459,p:53,  c:2,  f:23},    // 200g lean beef mince + veg
+  fish:   {k:250,p:46,  c:2,  f:3},     // 200g white fish + veg
+  salmon: {k:444,p:43,  c:2,  f:24.5},  // 200g salmon + veg
+  smoked: {k:264,p:35,  c:2,  f:7.5},   // 200g smoked salmon + veg
+  banana: {k:105,p:1.2, c:27, f:0.3},   // each
+  whey:   {k:120,p:24,  c:3,  f:1.5},   // 1 scoop in water
+  honey:  {k:30, p:0,   c:8,  f:0},     // drizzle (~10g)
+};
+const riceN = g => ({k:1.3*g, p:0.028*g, c:0.28*g, f:0.003*g});
+const spN   = g => ({k:0.9*g, p:0.021*g, c:0.21*g, f:0.0025*g});
+const sum = (...xs) => xs.reduce((a,x)=>({k:a.k+x.k,p:a.p+x.p,c:a.c+x.c,f:a.f+x.f}),{k:0,p:0,c:0,f:0});
+const meal = (name, detail, ...parts) => { const s=sum(...parts); return [name, detail, s.k, s.p, s.c, s.f]; };
+
+const PROT_LABEL = {chicken:"200g chicken breast", beef:"200g lean beef mince", fish:"200g white fish",
+                    salmon:"200g salmon", smoked:"200g smoked salmon"};
+const M2_ROT = {1:"chicken",2:"beef",3:"chicken",4:"beef",5:"chicken",6:"beef",0:"beef"};
+const M3_ROT = {1:"salmon",2:"fish",3:"smoked",4:"fish",5:"salmon",6:"fish"};   // Sunday handled per phase
+const CARBS = { p1:{tr:[282,376], re:[218,291]}, p2:{tr:[140,186], re:[111,148]}, p3:{tr:[68,91], re:[75,100]} };
+
+const M1_MEAL = meal("Meal 1 — Breakfast","250g full-fat Greek yoghurt + 1 scoop whey + 150g frozen berries", N.m1);
+const M4_MEAL = meal("Meal 4 — Dinner","180g chicken breast + 2 whole eggs + veg", N.m4);
+
+function mealsFor(pk, dow){
+  const rest = dow===0;
+  const [rice, sp] = CARBS[pk][rest?"re":"tr"];
+  const m2p = M2_ROT[dow];
+  const m3p = rest ? (pk==="p1"?"salmon":"fish") : M3_ROT[dow];
+  const out = [M1_MEAL];
+  if(!rest){
+    out.push(LIFT_DOWS.includes(dow)
+      ? meal("Pre-Training Meal","<b>2 bananas + 2 slices sourdough</b> — eat 60–90 min before your session", N.pt)
+      : meal("Mid-Morning Meal","<b>2 bananas + 2 slices sourdough</b> — no session today, have it mid-morning (before LISS if you're doing cardio)", N.pt));
+  }
+  out.push(meal("Meal 2 — Lunch",`${PROT_LABEL[m2p]} + <b>${rice}g cooked rice</b> + veg`, N[m2p], riceN(rice)));
+  out.push(meal("Meal 3 — Dinner Prep",`${PROT_LABEL[m3p]} + <b>${sp}g cooked sweet potato</b> + veg`, N[m3p], spN(sp)));
+  out.push(M4_MEAL);
+  return out;
 }
 const TARGETS = {
-  p1:{tr:"~2,750 kcal · 210g P · 300g C · 75g F", re:"~2,450 kcal · 210g P · 160g C · 80g F"},
-  p2:{tr:"~2,400 kcal · 210g P · 220g C · 65g F", re:"~2,050 kcal · 210g P · 100g C · 65g F"},
-  p3:{tr:"~2,200 kcal · 200g P · 180g C · 60g F", re:"~1,900 kcal · 200g P · 80g C · 65g F"},
+  p1:{tr:"~2,750 kcal · 300g carbs", re:"~2,450 kcal · 160g carbs"},
+  p2:{tr:"~2,400 kcal · 220g carbs", re:"~2,050 kcal · 100g carbs"},
+  p3:{tr:"~2,200 kcal · 180g carbs", re:"~1,900 kcal · 80g carbs"},
 };
 
-/* ---- Event week: full day-by-day plans, Mon (Day −5) → Sat (event day) ----
-   Depletion sessions = the normal A sessions at 70–80% load, reps pushed to 15–20.
-   Low days = Phase 2 rest-day meal amounts (per the program doc). */
+/* ---- Event week: full day-by-day plans (new foods, new split, protocol baked in) ---- */
 const depEx = n => SESSIONS[n].ex.map(([e,s]) => [e, s.split("×")[0].trim()+" × 15–20"]);
-const EW_M1 = ["Meal 1 — Breakfast","250g Greek yoghurt (low-fat, plain) + 1 scoop whey + 150g frozen berries",345,50,30,3];
-const EW_LOWM = [EW_M1,
-  ["Meal 2 — Lunch","200g chicken breast + <b>110g cooked rice</b> + veg",506,65,31,7],
-  ["Meal 3 — Afternoon","200g white fish + <b>150g cooked sweet potato</b> + veg",385,49,31,3],
-  ["Meal 4 — Dinner","180g chicken breast + 2 whole eggs + veg + <b>1.5 tbsp olive oil (21g)</b> + <b>30g almonds (~18 almonds)</b>",846,74,10,53]];
-
+const lowMeals = dow => {                       // depletion days: weekly rotation at Phase-2 rest-day carbs (~100g C)
+  const m2p=M2_ROT[dow], m3p=M3_ROT[dow];
+  return [M1_MEAL,
+    meal("Meal 2 — Lunch",`${PROT_LABEL[m2p]} + <b>111g cooked rice</b> + veg`, N[m2p], riceN(111)),
+    meal("Meal 3 — Afternoon",`${PROT_LABEL[m3p]} + <b>148g cooked sweet potato</b> + veg`, N[m3p], spN(148)),
+    M4_MEAL];
+};
 const EVENT_WEEK = [
   { d:"Day −5", tag:"Deplete",
     banner:"Draining muscle glycogen through low carbs and high-rep volume. Follow today exactly — don't freelance extras.",
-    session:{name:"Push A — Depletion", focus:SESSIONS[1].focus, ex:depEx(1),
+    session:{name:"Upper A — Depletion", focus:SESSIONS[1].focus, ex:depEx(1),
       note:"Load: 70–80% of your normal weights (drop 20–30%). High reps, controlled — you're draining glycogen, not chasing strength."},
     cardio:"Light walk · 20–30 min easy",
-    meals:EW_LOWM,
-    mealNote:"~100g carbs — deliberately low to draw down glycogen. Protein stays high. No pre-training meal this week.",
+    meals:lowMeals(1),
+    mealNote:"~100g carbs — deliberately low to draw down glycogen. Protein stays high. No banana/sourdough meal this week until the load.",
     water:"4–4.5 L — stay high", sodium:"Normal — don't restrict yet" },
 
   { d:"Day −4", tag:"Deplete",
     banner:"Second depletion day — same rules as yesterday.",
-    session:{name:"Pull A — Depletion", focus:SESSIONS[2].focus, ex:depEx(2),
-      note:"Load: 70–80% of normal (drop 20–30%). Keep deadlifts especially crisp at high reps — form first."},
+    session:{name:"Lower A — Depletion", focus:SESSIONS[2].focus, ex:depEx(2),
+      note:"Load: 70–80% of normal (drop 20–30%). Keep the hinge especially crisp at high reps — form first."},
     cardio:"Light walk · 20–30 min easy",
-    meals:EW_LOWM,
-    mealNote:"~100g carbs — same as yesterday.",
+    meals:lowMeals(2),
+    mealNote:"~100g carbs — same approach as yesterday.",
     water:"4–4.5 L — stay high", sodium:"Normal — don't restrict yet" },
 
   { d:"Day −3", tag:"Last low day",
-    banner:"Last low-carb day and last full session. After today, training is done or very light only.",
-    session:{name:"Legs A — Depletion", focus:SESSIONS[3].focus, ex:depEx(3),
-      note:"Load: 70–80% of normal (drop 20–30%). Last full session of the program — finish it clean."},
+    banner:"Last low-carb day and last session of the program. A full-body pass to finish draining every muscle group.",
+    session:{name:"Full Body — Depletion", focus:"Last session — every muscle group, light and high-rep",
+      ex:[["Chest Press","2 × 15–20"],["Back Row","2 × 15–20"],["Shoulder Press","2 × 15–20"],
+          ["Quad Press","2 × 15–20"],["Hamstring Curl","2 × 15–20"],["Calf Raise","2 × 15–20"]],
+      note:"Load: 70–80% of normal (drop 20–30%). After today, training is done or very light only."},
     cardio:"Light walk · 20–30 min easy",
-    meals:EW_LOWM,
-    mealNote:"~100–120g carbs — loading starts tomorrow.",
+    meals:lowMeals(3),
+    mealNote:"~100g carbs — smoked salmon day; it's salty, which is fine for now (sodium stays normal until Friday). Loading starts tomorrow.",
     water:"4–4.5 L — stay high", sodium:"Normal — don't restrict yet" },
 
   { d:"Day −2", tag:"Carb load",
     banner:"The load. Refilling the glycogen you drained Mon–Wed — it pulls water into the muscle, which reads as full, not puffy.",
     session:{name:"Optional pump session", focus:"Only if you feel like moving — otherwise full rest",
-      ex:[["DB or band press","2 × 15–20"],["Band or cable lateral raise","2 × 15–20"],
-          ["Band row or face pull","2 × 15–20"],["Band or light DB curl","2 × 15–20"]],
+      ex:[["Chest Press (light)","2 × 15–20"],["Shoulder Raise","2 × 15–20"],
+          ["Back Row (light)","2 × 15–20"],["Bicep Curl (light)","2 × 15–20"]],
       note:"Very light, stop miles from failure — you're moving blood, not training. Skipping this entirely is completely fine."},
     cardio:"Light walk · 20–30 min easy",
     meals:[
-      ["Meal 1 — Breakfast","250g Greek yoghurt + 1 scoop whey + 150g berries + <b>2 bananas</b>",555,52,84,4],
-      ["Meal 2 — Mid-morning","<b>2 bananas + 2 slices sourdough</b>",470,13,104,2],
-      ["Meal 3 — Lunch","200g chicken breast + <b>450g cooked rice</b> + veg",945,75,128,9],
-      ["Meal 4 — Afternoon","200g white fish + <b>450g cooked sweet potato</b> + veg",653,56,97,4],
-      ["Meal 5 — Dinner","180g chicken breast + 2 whole eggs + veg + <b>1.5 tbsp olive oil (21g)</b>",669,68,3,38]],
-    mealNote:"~415g carbs from clean sources — rice, sweet potato, banana, sourdough — spread across the day. Nothing new or exotic.",
+      meal("Meal 1 — Breakfast","250g full-fat Greek yoghurt + 1 scoop whey + 150g berries + <b>2 bananas</b>", N.m1, N.banana, N.banana),
+      meal("Meal 2 — Mid-morning","<b>2 bananas + 2 slices sourdough</b>", N.pt),
+      meal("Meal 3 — Lunch","200g chicken breast + <b>450g cooked rice</b> + veg", N.chicken, riceN(450)),
+      meal("Meal 4 — Afternoon","200g white fish + <b>450g cooked sweet potato</b> + veg", N.fish, spN(450)),
+      meal("Meal 5 — Dinner","180g chicken breast + 2 whole eggs + veg", N.m4)],
+    mealNote:"~415g carbs from clean sources — rice, sweet potato, banana, sourdough — spread across the day. Lean proteins only today (chicken, white fish); glycogen is the priority. Nothing new or exotic.",
     water:"4–4.5 L — keep high", sodium:"Normal — don't cut yet" },
 
   { d:"Day −1", tag:"Dry out",
@@ -354,13 +382,13 @@ const EVENT_WEEK = [
     session:{name:"Rest", focus:"Nothing today — staying calm and off your feet is the work", ex:null},
     cardio:"Light walk only if you want to move — short and easy",
     meals:[
-      ["Meal 1 — Breakfast","1 scoop whey (in water) + <b>300g cooked rice</b> + <b>2 bananas</b>",720,35,141,3],
-      ["Meal 2 — Lunch","200g chicken breast + <b>350g cooked rice</b> + veg — no added salt",815,72,100,8],
-      ["Meal 3 — Afternoon","200g white fish + <b>350g cooked sweet potato</b> — no added salt",563,53,76,4],
-      ["Meal 4 — Dinner","180g chicken breast + 2 whole eggs + veg + <b>1.5 tbsp olive oil (21g)</b> — no added salt",669,68,3,38]],
-    mealNote:"~320g carbs. No yoghurt today (large dairy serve = bloat risk) and no sourdough (baked with salt). Low-fibre veg only in small amounts — cucumber, zucchini, green beans. No broccoli, cauliflower or legumes.",
+      meal("Meal 1 — Breakfast","1 scoop whey (in water) + <b>300g cooked rice</b> + <b>2 bananas</b>", N.whey, riceN(300), N.banana, N.banana),
+      meal("Meal 2 — Lunch","200g chicken breast + <b>350g cooked rice</b> + veg — no added salt", N.chicken, riceN(350)),
+      meal("Meal 3 — Afternoon","200g white fish + <b>350g cooked sweet potato</b> — no added salt", N.fish, spN(350)),
+      meal("Meal 4 — Dinner","180g chicken breast + 2 whole eggs + veg — no added salt", N.m4)],
+    mealNote:"~320g carbs. No yoghurt (large dairy serve = bloat risk), no sourdough (baked with salt), no smoked salmon or beef today — chicken and white fish only. Low-fibre veg in small amounts: cucumber, zucchini, green beans. No broccoli, cauliflower or legumes.",
     water:"Taper down gradually through the day — ease off, don't cut abruptly",
-    sodium:"CUT from here — no added salt, no processed / salty / restaurant food",
+    sodium:"CUT from here — no added salt, no processed / cured / restaurant food",
     extra:"<b>Sleep is the priority tonight</b> — a bad night shows on your face and eyes tomorrow more than almost anything else." },
 
   { d:"EVENT DAY", tag:"Peak",
@@ -371,7 +399,7 @@ const EVENT_WEEK = [
       note:"Just enough to get blood in the muscle without fatiguing yourself. Stop while everything still feels easy."},
     cardio:null,
     meals:[
-      ["Pre-event feed — 2–4 h before","<b>150g cooked white rice + a drizzle of honey</b> (or 3–4 rice cakes with honey) · optional 1 scoop whey in water",225,4,50,1],
+      meal("Pre-event feed — 2–4 h before","<b>150g cooked white rice + a drizzle of honey</b> (or 3–4 rice cakes with honey) · optional 1 scoop whey in water", riceN(150), N.honey),
       ["After the event","Eat and drink normally — rehydrate with water + electrolytes. You've earned it.",0,0,0,0]],
     mealNote:"30–50g carbs, small and familiar — a big meal now looks like bloat, not fullness. Nothing new today.",
     noTotals:true,
@@ -445,7 +473,7 @@ function sessionCard(S, opts){
 }
 function mealsCard(meals, checks, heading, footNote, showTotals, details){
   const rows = meals.map((m,i)=>chkRow("meal"+i, m[0], m[1],
-    m[2]?`${m[2]} kcal · ${m[3]}g P · ${m[4]}g C · ${m[5]}g F`:"", checks.includes("meal"+i))).join("");
+    m[2]?`${Math.round(m[2])} kcal · ${Math.round(m[3])}g P · ${Math.round(m[4])}g C · ${Math.round(m[5])}g F`:"", checks.includes("meal"+i))).join("");
   const tot = meals.reduce((a,m)=>[a[0]+m[2],a[1]+m[3],a[2]+m[4],a[3]+m[5]],[0,0,0,0]);
   return `<div class="card">
     <h2><span class="ic">🍽</span>${heading}</h2>
@@ -455,20 +483,34 @@ function mealsCard(meals, checks, heading, footNote, showTotals, details){
     ${details||""}
   </div>`;
 }
-function weighRow(dt){
-  const w = getWeights()[iso(dt)];
+function weighCard(dt){
+  const weights = getWeights();
+  const w = weights[iso(dt)];
   const logged = w!=null;
-  return `<div class="chk${logged?" on":""}" data-weigh="1" style="cursor:default">
-    <div class="box"></div>
-    <div class="body">
-      <div class="t">Morning weigh-in</div>
-      <div class="s">Daily — trends matter, single readings bounce with carb cycling</div>
-      <div class="winput">
-        <input id="wIn" type="number" inputmode="decimal" step="0.1" min="30" max="250" placeholder="0.0" value="${logged?w:""}">
-        <span class="unit">kg</span>
-        <button id="wSave">${logged?"Update":"Save"}</button>
+  // most recent entry strictly before this date
+  const prevKey = Object.keys(weights).filter(k=>k<iso(dt)).sort().pop();
+  let deltaHtml = "";
+  if(logged && prevKey){
+    const d = w - weights[prevKey];
+    const cls = d<0?"down":(d>0?"up":"flat");
+    const arrow = d<0?"▼":(d>0?"▲":"■");
+    deltaHtml = `<div class="wdeltatag ${cls}">${arrow} ${Math.abs(d).toFixed(1)} kg vs last entry (${fmtShort(fromIso(prevKey))})</div>`;
+  } else if(!logged && prevKey){
+    deltaHtml = `<div class="wdeltatag flat">Last entry: ${weights[prevKey].toFixed(1)} kg — ${fmtShort(fromIso(prevKey))}</div>`;
+  }
+  return `<div class="card">
+    <div class="weighcard">
+      <div class="wico">⚖️</div>
+      <div class="wmain">
+        <div class="wt">Morning weigh-in ${logged?'<span class="tag" style="color:var(--acc);border-color:rgba(163,230,53,.4)">Done</span>':""}</div>
+        <div class="ws">First thing, after the bathroom, before food or water</div>
+        <div class="winput">
+          <input id="wIn" type="number" inputmode="decimal" step="0.1" min="30" max="250" placeholder="0.0" value="${logged?w:""}">
+          <span class="unit">kg</span>
+          <button id="wSave">${logged?"Update":"Save"}</button>
+        </div>
+        ${deltaHtml}
       </div>
-      ${logged?`<div class="wlogged">Logged: ${w.toFixed(1)} kg — full history in the Weight tab</div>`:""}
     </div>
   </div>`;
 }
@@ -479,7 +521,6 @@ function habitsCard(dt, checks, eventWeek){
     ${eventWeek
       ? chkRow("h-steps","Stay lightly active","Easy walking only this week — no HIIT, no long cardio","",checks.includes("h-steps"))
       : chkRow("h-steps","8,000–10,000 steps","Outside of training","",checks.includes("h-steps"))}
-    ${weighRow(dt)}
     ${dt.getDay()===0?chkRow("h-photos","Weekly photos + waist measurement","Same time of day, same lighting as last week","",checks.includes("h-photos")):""}
   </div>`;
 }
@@ -535,7 +576,7 @@ function renderToday(){
   document.getElementById("progBar").style.width = Math.round(dayNum/TOTAL_DAYS*100)+"%";
   document.getElementById("progLabel").textContent = Math.round(dayNum/TOTAL_DAYS*100)+"% complete";
 
-  const parts = [];
+  const parts = [weighCard(viewDate)];   // weigh-in first — see it when you wake up
 
   /* ---- EVENT WEEK ---- */
   if(pk==="p4"){
@@ -578,32 +619,40 @@ function renderToday(){
   }
 
   /* ---- NORMAL WEEKS ---- */
-  const training = dow !== 0;
-  const S = training ? SESSIONS[dow] : null;
-  const meals = mealsFor(pk, training);
+  const lifting = LIFT_DOWS.includes(dow);
+  const meals = mealsFor(pk, dow);
   const cardio = P.cardio[dow];
 
   if(isDeload){
     parts.push(`<div class="banner amber"><b>⚠️ Deload week — non-negotiable</b>
-      Cut sets ~40% (4 sets → 2–3), keep weights around 70% of normal, stay a few reps short of failure. Same split, lighter and shorter sessions. This protects joints, CNS and hormones — skipping it is how people burn out around week 8–9.</div>`);
+      Drop a set from each exercise (3 → 2), keep weights around 70% of normal, stay a few reps short of failure. Same split, lighter and shorter sessions. This protects joints, CNS and hormones — skipping it is how people burn out around week 8–9.</div>`);
   }
 
-  if(training){
-    parts.push(sessionCard(S, {
+  if(lifting){
+    parts.push(sessionCard(SESSIONS[dow], {
       tag: isDeload ? "Deload" : "",
-      extraNote: isDeload ? `<div class="note" style="color:#fde68a">Deload: run 2–3 sets per exercise at ~70% of usual weight, well short of failure.</div>` : "",
+      extraNote: isDeload ? `<div class="note" style="color:#fde68a">Deload: drop a set from each exercise at ~70% of usual weight, well short of failure.</div>` : "",
       details: `<details><summary>Effort, rests & progression</summary><div class="inner"><ul>
+        <li><b>Volume:</b> ${SESSION_NOTE}</li>
         <li><b>Effort:</b> RPE 8–9 — leave 1–2 reps in the tank on most sets. True failure only on a final set, and only when recovering well.</li>
         <li><b>Rest:</b> 2–3 min on compounds · 60–90 s on isolation.</li>
         <li><b>Progression:</b> beat last week — one more rep at the same weight, or same reps slightly heavier. Log every set.</li>
         <li>If a lift stalls 2+ sessions, that's normal in a deficit — hold the weight and keep the reps clean.</li>
       </ul></div></details>`
     }));
+  } else if(dow===0){
+    parts.push(`<div class="card">
+      <h2><span class="ic">🚶</span>Today's session</h2>
+      <h3>Recovery Cardio</h3>
+      <div class="sub">No weights — one easy aerobic session to aid recovery (below). Weekly check-in day: waist measurement + progress photos, same time and lighting as last week.</div>
+    </div>`);
   } else {
     parts.push(`<div class="card">
       <h2><span class="ic">🛋</span>Today's session</h2>
       <h3>Rest day</h3>
-      <div class="sub">Full rest from weights. ${cardio ? "Cardio still on — see below." : ""} Weekly check-in day: waist measurement + progress photos, same time and lighting as last week.</div>
+      <div class="sub">${cardio
+        ? "Rest from lifting — recovery is the work now. Light cardio only today (below)."
+        : "Full rest — no weights, no cardio. Recovery is what makes the training stick."}</div>
     </div>`);
   }
 
@@ -611,19 +660,22 @@ function renderToday(){
     parts.push(`<div class="card">
       <h2><span class="ic">🏃</span>Cardio</h2>
       ${chkRow("cardio", cardio, cardio.startsWith("HIIT")
-        ? "Short and hard — 10 × (30 s hard / 90 s easy). Stacks on today's push session."
-        : "Separate session from weights — a fasted morning walk is ideal. Don't tack it onto the end of lifting.","",checks.includes("cardio"))}
+        ? "Short and hard — 10 × (30 s hard / 90 s easy). Stacks on today's Upper A."
+        : dow===0 ? "Recovery pace — easy and conversational, fasted morning walk is ideal."
+        : lifting ? "Separate session from weights — a fasted morning walk is ideal. Don't tack it onto the end of lifting."
+        : "The only session today — easy pace, ideally a fasted morning walk.","",checks.includes("cardio"))}
     </div>`);
   }
 
-  parts.push(mealsCard(meals, checks, `Meals — ${training?"training day":"rest day"}`,
-    `Phase target: ${TARGETS[pk][training?"tr":"re"]}. Protein runs 30–40g over target by design — it's a buffer, not a mistake. Hit protein and watch the scale trend; don't chase calories to the exact digit.`,
+  parts.push(mealsCard(meals, checks, `Meals — ${dow===0?"rest day":"full day"}`,
+    `Phase target: ${TARGETS[pk][dow===0?"re":"tr"]}. Protein lands high by design and all fat comes from the food itself — salmon, beef, eggs, yoghurt. No added oils or nuts anywhere.`,
     true,
-    `<details><summary>Swaps & notes</summary><div class="inner"><ul>
-      <li>Olive oil is capped at 1.5 tbsp/day (used to cook Meal 4) — the rest of the fat comes from almonds because they're easy to actually eat.</li>
-      <li>Not into almonds? Swap roughly gram-for-gram with peanut butter, mixed nuts, or half an avocado.</li>
-      <li>Veg with every main meal, salt to taste (until event week).</li>
+    `<details><summary>Cooking & notes</summary><div class="inner"><ul>
+      <li>Cook without added oil — non-stick pan, air fryer, grill or bake. If you do use any, count it.</li>
+      <li>Smoked salmon is already salty — no need to salt that meal.</li>
+      <li>Veg with every main meal, salt other food to taste (until event week).</li>
       <li>Rice and sweet potato weights are <b>cooked</b> weights.</li>
+      <li>White fish swaps (basa, barramundi, snapper) are fine — keep the amount the same.</li>
     </ul></div></details>`));
 
   parts.push(`<div class="card">
@@ -660,7 +712,6 @@ function bindWeigh(root){
     renderToday();
   };
   btn.addEventListener("click", e=>{ e.stopPropagation(); save(); });
-  inp.addEventListener("click", e=>e.stopPropagation());
   inp.addEventListener("keydown", e=>{ if(e.key==="Enter"){ inp.blur(); save(); } });
 }
 
@@ -673,7 +724,7 @@ function renderWeight(){
   if(entries.length===0){
     el.innerHTML = `<div class="card">
       <h2><span class="ic">↘</span>Weight log</h2>
-      <div class="empty">No entries yet.<br><br>Log your morning weigh-in from the Today tab — every entry lands here automatically.</div>
+      <div class="empty">No entries yet.<br><br>Log your morning weigh-in at the top of the Today tab — every entry lands here automatically.</div>
     </div>`;
     return;
   }
@@ -767,20 +818,21 @@ function renderPlan(){
       <h2><span class="ic">🗓</span>The program at a glance</h2>
       ${block("p1",[
         "Small deficit — recomposition while holding strength",
-        "Train 6×/week · cardio 3×/week (Tue, Thu, Sun · 25–30 min LISS)",
+        "Lift 4×/week (Upper/Lower ×2) · LISS Tue + Thu + Sunday recovery cardio",
+        "Wed & Sat: full rest",
         "Water 3.5–4 L · sodium normal",
         "Deload: week 4 (Mon 3 – Sun 9 Aug)"])}
       ${block("p2",[
-        "Calories tighten (~2,400 training / ~2,050 rest)",
-        "Cardio rises: LISS 30 min Tue–Fri + Sun, plus 1 HIIT on Monday's push day",
+        "Calories tighten (~2,450–2,545 training / ~1,905 rest)",
+        "Cardio rises: LISS Tue/Wed/Thu/Sun + HIIT on Monday's Upper A",
         "Water 4–4.5 L · don't under-salt",
         "Deload: week 8 (Mon 31 Aug – Sun 6 Sep)"])}
       ${block("p3",[
-        "Final sharpen (~2,200 training / ~1,900 rest)",
-        "Heaviest cardio week: 5× LISS 30–35 min + 1 HIIT — full training intensity, no taper",
+        "Final sharpen (~2,270–2,365 training / ~1,820 rest)",
+        "Heaviest cardio week: LISS ×5 (Tue/Wed/Thu/Sat/Sun, 30–35 min) + Monday HIIT",
         "Keep water and sodium consistent — no manipulation yet"])}
       ${block("p4",[
-        "Mon–Wed: ~100g carbs, high-rep depletion training at 70–80% load — full meals & sessions in the Today view",
+        "Mon–Wed: ~100g carbs + depletion training (Upper A / Lower A / Full Body) — full meals & sessions in the Today view",
         "Thu: carb load ~415g, optional pump only",
         "Fri: ~320g carbs, sodium cut, water taper, low-fibre food, sleep well",
         "Sat 3 Oct: sips of water, small carb feed 2–4 h out, pump 60–90 min out — event day 🏁"])}
@@ -790,29 +842,34 @@ function renderPlan(){
       <h2><span class="ic">🏋️</span>Weekly split (all normal weeks)</h2>
       <table>
         <tr><th>Day</th><th>Session</th></tr>
-        <tr><td>Monday</td><td>Push A — chest/shoulders/triceps</td></tr>
-        <tr><td>Tuesday</td><td>Pull A — back/biceps</td></tr>
-        <tr><td>Wednesday</td><td>Legs A — quads/hams/glutes/calves</td></tr>
-        <tr><td>Thursday</td><td>Push B — chest/shoulders/triceps</td></tr>
-        <tr><td>Friday</td><td>Pull B — back/biceps</td></tr>
-        <tr><td>Saturday</td><td>Legs B — quads/hams/glutes/calves</td></tr>
-        <tr><td>Sunday</td><td>Off — full rest</td></tr>
+        <tr><td>Monday</td><td>Upper A — chest/back/shoulders/arms</td></tr>
+        <tr><td>Tuesday</td><td>Lower A — quads/hams/glutes/calves</td></tr>
+        <tr><td>Wednesday</td><td>Rest <span style="color:var(--dim)">(LISS from Phase 2)</span></td></tr>
+        <tr><td>Thursday</td><td>Upper B — chest/back/shoulders/arms</td></tr>
+        <tr><td>Friday</td><td>Lower B — quads/hams/glutes/calves</td></tr>
+        <tr><td>Saturday</td><td>Rest <span style="color:var(--dim)">(LISS in Phase 3)</span></td></tr>
+        <tr><td>Sunday</td><td>Recovery cardio — easy LISS only</td></tr>
       </table>
-      <div class="note">A and B use different exercises/rep ranges so you're not repeating identical sessions — also easier on the joints across the program. Compounds 6–10 reps · isolation 10–15 · RPE 8–9 · rest 2–3 min compounds, 60–90 s isolation.</div>
+      <div class="note">Every muscle group twice a week with less gym time — recovery matters more the deeper the cut gets. A and B use different exercises/rep ranges. ${SESSION_NOTE} Compounds 6–10 reps · isolation 10–15 · RPE 8–9 · rest 2–3 min compounds, 60–90 s isolation.</div>
     </div>
 
     <div class="card">
       <h2><span class="ic">🍽</span>How the meals work</h2>
-      <div class="sub" style="color:var(--text)">Same 4 fixed meals every day (+ a pre-training meal on training days). What changes by phase: the <b>rice</b> at Meal 2, the <b>sweet potato</b> at Meal 3, and the <b>almonds</b> at Meal 4. The Today tab always shows the exact grams for the current phase — zero guessing.</div>
+      <div class="sub" style="color:var(--text)">Meals 1 and 4 are fixed every day. Meals 2 and 3 rotate on a fixed weekly pattern so it's never the same plate two days running — fat comes entirely from the food itself (salmon, beef, eggs, full-fat yoghurt), nothing added on top. Only the rice and sweet potato amounts change by phase. The Today tab always shows the exact grams — zero guessing.</div>
       <table style="margin-top:10px">
-        <tr><th>Meal</th><th>Fixed base</th></tr>
-        <tr><td>Meal 1</td><td style="text-align:left;color:var(--mut)">250g Greek yoghurt + whey + 150g berries</td></tr>
-        <tr><td>Pre-training</td><td style="text-align:left;color:var(--mut)">2 bananas + 2 slices sourdough</td></tr>
-        <tr><td>Meal 2</td><td style="text-align:left;color:var(--mut)">200g chicken + rice + veg</td></tr>
-        <tr><td>Meal 3</td><td style="text-align:left;color:var(--mut)">200g white fish + sweet potato + veg</td></tr>
-        <tr><td>Meal 4</td><td style="text-align:left;color:var(--mut)">180g chicken + 2 eggs + veg + oil + almonds</td></tr>
+        <tr><th>Day</th><th>Meal 2 · Meal 3</th></tr>
+        <tr><td>Mon & Fri</td><td style="text-align:left;color:var(--mut)">Chicken · Salmon</td></tr>
+        <tr><td>Tue, Thu & Sat</td><td style="text-align:left;color:var(--mut)">Beef mince · White fish</td></tr>
+        <tr><td>Wednesday</td><td style="text-align:left;color:var(--mut)">Chicken · Smoked salmon</td></tr>
+        <tr><td>Sunday (rest)</td><td style="text-align:left;color:var(--mut)">Beef mince · Salmon (P1) / White fish (P2–3)</td></tr>
       </table>
-      <div class="note">Event week runs its own day-by-day meal plan — shown in full, meal by meal, in the Today view.</div>
+      <table style="margin-top:12px">
+        <tr><th>Fixed</th><th>Base</th></tr>
+        <tr><td>Meal 1</td><td style="text-align:left;color:var(--mut)">250g full-fat Greek yoghurt + whey + berries</td></tr>
+        <tr><td>Carb meal (Mon–Sat)</td><td style="text-align:left;color:var(--mut)">2 bananas + 2 slices sourdough</td></tr>
+        <tr><td>Meal 4</td><td style="text-align:left;color:var(--mut)">180g chicken + 2 eggs + veg</td></tr>
+      </table>
+      <div class="note">The carb meal is pre-training on lifting days and mid-morning on Wed/Sat. Sunday runs rest-day amounts with no carb meal. Event week has its own day-by-day meal plan, shown in full in the Today view.</div>
     </div>
 
     <div class="card">
@@ -821,7 +878,7 @@ function renderPlan(){
         <li><b>Progress every session</b> — one more rep, or same reps slightly heavier. Log everything.</li>
         <li><b>Sleep 7.5–9 h</b> — the biggest muscle-retention lever there is.</li>
         <li><b>8–10k steps daily</b> outside training.</li>
-        <li><b>Weigh daily, judge weekly</b> — log it in the app; the Weight tab keeps the full history.</li>
+        <li><b>Weigh daily, judge weekly</b> — the weigh-in lives at the top of every day; the Weight tab keeps the history.</li>
         <li><b>Photos + waist every Sunday</b> — same time, same lighting.</li>
         <li><b>Deloads in weeks 4 and 8</b> are part of the program, not optional.</li>
         <li>Consistently sore, flat or unmotivated for 3–4+ days = take an extra rest day or bring the deload forward.</li>
