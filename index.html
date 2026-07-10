@@ -198,6 +198,32 @@
 
   .bigday{font-size:26px;font-weight:800;letter-spacing:-.01em}
   .countnum{font-size:44px;font-weight:800;color:var(--acc);line-height:1.1}
+
+  /* half-week shop modal */
+  #shopOverlay{position:fixed;inset:0;z-index:100;background:rgba(4,6,10,.74);
+    -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+    display:flex;align-items:center;justify-content:center;padding:16px}
+  .shopmodal{width:100%;max-width:480px;max-height:84vh;overflow:auto;background:var(--card);
+    border:1px solid var(--line);border-radius:20px;padding:18px 16px;
+    padding-bottom:calc(18px + env(safe-area-inset-bottom))}
+  .shopmodal .sh1{font-size:17px;font-weight:800}
+  .shopmodal .sh2{font-size:12.5px;color:var(--mut);margin-top:2px}
+  .sgrp{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--dim);font-weight:700;margin:14px 0 2px}
+  .shoprow{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line);cursor:pointer}
+  .shoprow:first-of-type{border-top:none}
+  .shoprow .sbox{flex:none;width:20px;height:20px;border-radius:6px;border:1.5px solid #334051;
+    display:flex;align-items:center;justify-content:center;font-size:12px;color:#0a0d12;transition:all .15s}
+  .shoprow.on .sbox{background:var(--acc);border-color:var(--acc)}
+  .shoprow.on .sbox::after{content:"✓";font-weight:800}
+  .shoprow .sname{flex:1;font-weight:600;font-size:14px}
+  .shoprow .samt{text-align:right;font-size:12.5px;color:var(--mut);font-variant-numeric:tabular-nums;line-height:1.35}
+  .shoprow .samt b{color:var(--text)}
+  .shoprow.on .sname,.shoprow.on .samt{opacity:.4;text-decoration:line-through}
+  .shopbtns{display:flex;gap:10px;margin-top:16px}
+  .shopbtns button{flex:1;border:none;border-radius:12px;padding:12px 8px;font-weight:800;font-size:13.5px;cursor:pointer}
+  .shopbtns .primary{background:var(--acc);color:#0a0d12}
+  .shopbtns .ghost{background:var(--card2);color:var(--text);border:1px solid var(--line)}
+  .shopnote{font-size:11.5px;color:var(--dim);margin-top:10px;line-height:1.5}
   .center{text-align:center;padding:26px 16px}
 
   .hide{display:none}
@@ -669,11 +695,12 @@ function renderToday(){
         ${chkRow("prep-4","Kitchen scale","Portions are in exact grams — a scale removes all guessing","",checks.includes("prep-4"))}
         ${chkRow("prep-5","Baseline photos + waist measurement","Take them Sunday or Monday morning — you'll want them in week 12","",checks.includes("prep-5"))}
       </div>
+      ${shopCardHtml(viewDate)}
       <div class="card">
         <h2><span class="ic">👁</span>Preview</h2>
         <div class="sub">Use the arrows above to browse any day of the program — day 1 is Monday 13 July.</div>
       </div>`;
-    bindChecks(el);
+    bindChecks(el); bindShopCard(el);
     return;
   }
 
@@ -704,6 +731,7 @@ function renderToday(){
   document.getElementById("progLabel").textContent = Math.round(dayNum/TOTAL_DAYS*100)+"% complete";
 
   const parts = [weighCard(viewDate)];   // weigh-in first — see it when you wake up
+  parts.push(shopCardHtml(viewDate));    // Sun/Thu: half-week shop card ("" otherwise)
 
   /* ---- EVENT WEEK ---- */
   if(pk==="p4"){
@@ -741,7 +769,7 @@ function renderToday(){
     parts.push(`<div class="banner amber"><b>Safety line</b>If you feel genuinely unwell at any point — dizzy, disoriented, racing heart, severe cramping — stop the protocol, drink water normally and eat normally. One day is never worth your health.</div>`);
 
     el.innerHTML = parts.join("");
-    bindChecks(el); bindWeigh(el); bindLifts(el); updateMacroCounter();
+    bindChecks(el); bindWeigh(el); bindLifts(el); bindShopCard(el); updateMacroCounter();
     return;
   }
 
@@ -824,7 +852,7 @@ function renderToday(){
   parts.push(habitsCard(viewDate, checks, false));
 
   el.innerHTML = parts.join("");
-  bindChecks(el); bindWeigh(el); bindLifts(el); updateMacroCounter();
+  bindChecks(el); bindWeigh(el); bindLifts(el); bindShopCard(el); updateMacroCounter();
 }
 
 function bindChecks(root){
@@ -909,6 +937,146 @@ function bindBackup(root){
     rd.readAsText(file);
     e.target.value = "";
   });
+}
+
+/* ============ HALF-WEEK SHOP ============ */
+/* Sunday covers Mon–Wed; Thursday covers Fri–Sun. Totals are parsed from the
+   exact meal strings the app displays, so the list can never drift from the plan. */
+function shopDates(dt){
+  const dow = dt.getDay();
+  if(dow!==0 && dow!==4) return null;
+  const ds = [];
+  for(let i=1;i<=3;i++){
+    const d = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate()+i);
+    const idx = dayIndex(d);
+    if(idx>=0 && idx<TOTAL_DAYS) ds.push(d);
+  }
+  return ds.length ? ds : null;
+}
+function mealsForDate(d){
+  const pk = phaseKeyForWeek(weekOf(d));
+  if(pk==="p4"){ const ei = Math.min(Math.max(eventIdx(d),0),5); return EVENT_WEEK[ei].meals; }
+  return mealsFor(pk, d.getDay());
+}
+function shopTotals(dates){
+  const t = {chicken:0,beef:0,salmon:0,smoked:0,fish:0,yog:0,berries:0,rice:0,sp:0,eggs:0,bananas:0,sourdough:0,whey:0,honey:false,veg:0};
+  const P = [
+    ["chicken",  /(\d+(?:\.\d+)?)g chicken breast/g],
+    ["beef",     /(\d+(?:\.\d+)?)g lean beef mince/g],
+    ["smoked",   /(\d+(?:\.\d+)?)g smoked salmon/g],
+    ["salmon",   /(\d+(?:\.\d+)?)g salmon/g],
+    ["fish",     /(\d+(?:\.\d+)?)g white fish/g],
+    ["yog",      /(\d+(?:\.\d+)?)g full-fat Greek yoghurt/g],
+    ["berries",  /(\d+(?:\.\d+)?)g (?:frozen )?berries/g],
+    ["rice",     /(\d+(?:\.\d+)?)g cooked (?:white )?rice/g],
+    ["sp",       /(\d+(?:\.\d+)?)g cooked sweet potato/g],
+    ["eggs",     /(\d+) whole eggs/g],
+    ["bananas",  /(\d+) bananas?/g],
+    ["sourdough",/(\d+) slices? sourdough/g],
+    ["whey",     /(\d+) scoop whey/g],
+  ];
+  for(const d of dates){
+    for(const m of mealsForDate(d)){
+      const s = m[1].replace(/<[^>]+>/g,"");
+      for(const [k,re] of P){ for(const hit of s.matchAll(re)) t[k] += parseFloat(hit[1]); }
+      if(/honey/.test(s)) t.honey = true;
+      if(/\bveg\b/.test(s)) t.veg++;
+    }
+  }
+  return t;
+}
+const gFmt = g => g>=1000 ? (Math.round(g/10)/100).toFixed(2).replace(/0+$/,"").replace(/\.$/,"")+" kg" : g+" g";
+const buyHalfKg = g => { const k = Math.ceil(g/500)*0.5; return k>=1 ? (k%1 ? k.toFixed(1) : k)+" kg" : "500 g"; };
+function shopRows(t){
+  const rows = [];
+  const add = (grp,key,name,need,buy)=>rows.push({grp,key,name,need,buy});
+  if(t.chicken) add("Proteins","chicken","Chicken breast", gFmt(t.chicken), "buy "+buyHalfKg(t.chicken));
+  if(t.beef)    add("Proteins","beef","Lean beef mince", gFmt(t.beef), "buy "+buyHalfKg(t.beef));
+  if(t.salmon)  add("Proteins","salmon","Salmon", gFmt(t.salmon), "buy "+buyHalfKg(t.salmon));
+  if(t.fish)    add("Proteins","fish","White fish", gFmt(t.fish), "buy "+buyHalfKg(t.fish));
+  if(t.smoked)  add("Proteins","smoked","Smoked salmon", gFmt(t.smoked), "≈ "+Math.ceil(t.smoked/100)*100+" g pack"+(t.smoked>200?"s":""));
+  if(t.eggs)    add("Proteins","eggs","Eggs", t.eggs+" eggs", "");
+  if(t.yog)     add("Proteins","yog","Greek yoghurt (full-fat)", gFmt(t.yog), "buy a "+(t.yog>500?"1 kg":"500 g")+" tub");
+  if(t.whey)    add("Proteins","whey","Whey", t.whey+" scoops", "check your tub");
+  if(t.rice)    add("Carbs","rice","White rice", gFmt(t.rice)+" cooked", "≈ "+Math.ceil(t.rice/2.8/50)*50+" g dry");
+  if(t.sp)      add("Carbs","sp","Sweet potato", gFmt(t.sp)+" cooked", "buy "+buyHalfKg(t.sp*1.1)+" raw");
+  if(t.bananas) add("Carbs","bananas","Bananas", t.bananas+" bananas", "");
+  if(t.sourdough) add("Carbs","sourdough","Sourdough", t.sourdough+" slices", "");
+  if(t.berries) add("Carbs","berries","Frozen berries", gFmt(t.berries), "buy a "+Math.ceil(t.berries/500)*500+" g bag");
+  if(t.honey)   add("Carbs","honey","Honey", "a drizzle (event day)", "");
+  if(t.veg)     add("Fresh","veg","Veg", t.veg+" main meals' worth", "your choice");
+  return rows;
+}
+function closeShopModal(){ const o=document.getElementById("shopOverlay"); if(o) o.remove(); }
+function showShopModal(baseDate){
+  const dates = shopDates(baseDate);
+  if(!dates) return false;
+  closeShopModal();
+  const t = shopTotals(dates);
+  const rows = shopRows(t);
+  const key = "p12-shop-"+iso(baseDate);
+  let ticks = []; try{ ticks = JSON.parse(localStorage.getItem(key)||"[]"); }catch(e){}
+  const range = dates.map(d=>DOW[d.getDay()].slice(0,3)).join(" · ")+` — ${fmtShort(dates[0])} to ${fmtShort(dates[dates.length-1])}`;
+  let html = "", grp = "";
+  for(const r of rows){
+    if(r.grp!==grp){ grp=r.grp; html += `<div class="sgrp">${grp}</div>`; }
+    html += `<div class="shoprow${ticks.includes(r.key)?" on":""}" data-si="${r.key}">
+      <div class="sbox"></div>
+      <div class="sname">${r.name}</div>
+      <div class="samt"><b>${r.need}</b>${r.buy?`<br>${r.buy}`:""}</div>
+    </div>`;
+  }
+  const o = document.createElement("div");
+  o.id = "shopOverlay";
+  o.innerHTML = `<div class="shopmodal">
+    <div class="sh1">🛒 Half-week shop</div>
+    <div class="sh2">Covers ${range}. Exact amounts in bold — buy suggestions rounded up.</div>
+    ${html}
+    <div class="shopnote">Totals are summed from those days' exact meals (phase-correct, event week included). Tap items to tick them off while you shop.</div>
+    <div class="shopbtns">
+      <button class="ghost" id="shopClose">Close</button>
+      <button class="primary" id="shopDone">Done — hide for today</button>
+    </div>
+  </div>`;
+  document.body.appendChild(o);
+  o.addEventListener("click", e=>{ if(e.target===o) closeShopModal(); });
+  o.querySelector("#shopClose").addEventListener("click", closeShopModal);
+  o.querySelector("#shopDone").addEventListener("click", ()=>{
+    localStorage.setItem("p12-shopdone", iso(new Date()));
+    closeShopModal();
+  });
+  o.querySelectorAll(".shoprow").forEach(r=>{
+    r.addEventListener("click", ()=>{
+      r.classList.toggle("on");
+      const on = r.classList.contains("on");
+      let a = []; try{ a = JSON.parse(localStorage.getItem(key)||"[]"); }catch(e){}
+      if(on && !a.includes(r.dataset.si)) a.push(r.dataset.si);
+      if(!on) a = a.filter(x=>x!==r.dataset.si);
+      localStorage.setItem(key, JSON.stringify(a));
+    });
+  });
+  return true;
+}
+function maybeShowShop(){
+  const now = new Date();
+  if(now.getDay()!==0 && now.getDay()!==4) return;
+  if(localStorage.getItem("p12-shopdone")===iso(now)) return;
+  if(document.getElementById("shopOverlay")) return;
+  showShopModal(now);
+}
+function shopCardHtml(dt){
+  const dates = shopDates(dt);
+  if(!dates) return "";
+  return `<div class="card">
+    <h2><span class="ic">🛒</span>Half-week shop</h2>
+    <div class="sub">Shopping + prep day — covers ${dates.map(d=>DOW[d.getDay()].slice(0,3)).join(", ")} (${fmtShort(dates[0])} → ${fmtShort(dates[dates.length-1])}).</div>
+    <div class="winput" style="margin-top:12px"><button id="shopOpen" style="flex:1;max-width:none">View shopping list</button></div>
+  </div>`;
+}
+function bindShopCard(root){
+  const b = root.querySelector("#shopOpen");
+  if(b){ const d = new Date(viewDate.getFullYear(),viewDate.getMonth(),viewDate.getDate());
+    b.addEventListener("click", ()=>showShopModal(d)); }
 }
 
 /* ============ WEIGHT VIEW ============ */
@@ -1113,11 +1281,17 @@ tabs.forEach(t=>{
   });
 });
 
-/* refresh when app is reopened on a new day */
+/* refresh when app is reopened on a new day; shop popup on every open on Sun/Thu */
 document.addEventListener("visibilitychange",()=>{
-  if(!document.hidden){ const t=new Date(); if(iso(t)!==iso(viewDate) && iso(viewDate)===localStorage.getItem("p12-lastday")){ viewDate=t; renderToday(); } localStorage.setItem("p12-lastday", iso(t)); }
+  if(!document.hidden){
+    const t=new Date();
+    if(iso(t)!==iso(viewDate) && iso(viewDate)===localStorage.getItem("p12-lastday")){ viewDate=t; renderToday(); }
+    localStorage.setItem("p12-lastday", iso(t));
+    maybeShowShop();
+  }
 });
 localStorage.setItem("p12-lastday", iso(new Date()));
+maybeShowShop();
 
 /* offline: cache the app on-device so it opens with zero signal */
 if("serviceWorker" in navigator){ navigator.serviceWorker.register("./sw.js").catch(()=>{}); }
