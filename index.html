@@ -182,6 +182,7 @@
   .nowtag{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.06em;background:var(--acc);color:#0a0d12;padding:2px 7px;border-radius:6px;margin-left:7px;vertical-align:1px}
 
   .bigday{font-size:26px;font-weight:800;letter-spacing:-.01em}
+  .countnum{font-size:44px;font-weight:800;color:var(--acc);line-height:1.1}
   .center{text-align:center;padding:26px 16px}
 
   .hide{display:none}
@@ -228,10 +229,10 @@
 
 /* ============ PROGRAM CONSTANTS ============ */
 
-const START = {y:2026, m:7, d:9};            // commenced Thu 9 July 2026 (day 1)
+const START = {y:2026, m:7, d:13};           // Day 1 — Mon 13 July 2026
 const DOCW0 = {y:2026, m:7, d:13};           // Mon 13 July — anchor for week numbering (Mon-aligned)
 const EVENTMON = {y:2026, m:9, d:28};        // Mon 28 Sep — event week begins
-const TOTAL_DAYS = 87;                        // Thu 9 Jul → Sat 3 Oct (event day)
+const TOTAL_DAYS = 83;                        // Mon 13 Jul → Sat 3 Oct (event day)
 const DELOAD_WEEKS = [4, 8];
 const LIFT_DOWS = [1,2,4,5];                  // Mon, Tue, Thu, Fri
 const DOW = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
@@ -257,7 +258,7 @@ const SESSIONS = {
 const SESSION_NOTE = "2–3 sets per exercise, max — lower volume, higher quality. Make every set count.";
 
 const PHASES = {
-  p1:{chip:"Phase 1 · Recomp", cls:"", title:"Phase 1 — Recomp", range:"Commenced Thu 9 Jul → Sun 23 Aug",
+  p1:{chip:"Phase 1 · Recomp", cls:"", title:"Phase 1 — Recomp", range:"Weeks 1–6 · Mon 13 Jul → Sun 23 Aug",
       water:"3.5–4 L", sodium:"Normal — salt food to taste",
       waterNote:"No restriction needed — the deficit is small this phase.",
       cardio:{2:"LISS · 25–30 min",4:"LISS · 25–30 min",0:"LISS · 25–30 min"}},
@@ -557,16 +558,31 @@ function renderToday(){
   const isToday = iso(viewDate)===iso(new Date());
   document.getElementById("todayBtn").classList.toggle("hidden", isToday);
 
-  /* before commencement (only reachable by browsing back) */
+  /* before day 1 */
   if(idx < 0){
     chip.textContent = "PEAK/12"; chip.className = "phasechip";
-    document.getElementById("dateSub").textContent = "Before commencement";
+    document.getElementById("dateSub").textContent = "Program starts Mon 13 July";
     document.getElementById("progBar").style.width = "0%";
     document.getElementById("progLabel").textContent = "";
-    el.innerHTML = `<div class="card center">
-      <div class="bigday">Program commenced<br>Thursday 9 July</div>
-      <div class="sub" style="margin-top:8px">Use the arrows above to get back to the plan.</div>
-    </div>`;
+    el.innerHTML = `
+      <div class="card center">
+        <div class="sub" style="margin-bottom:6px">Program starts in</div>
+        <div class="countnum">${-idx} day${idx===-1?"":"s"}</div>
+        <div class="sub" style="margin-top:6px">Monday 13 July → event day Saturday 3 October<br>Day 1: Upper A + full training-day meals</div>
+      </div>
+      <div class="card">
+        <h2><span class="ic">🛒</span>Get ready — week 1 shop</h2>
+        ${chkRow("prep-1","Proteins","Chicken breast · lean beef mince · salmon · smoked salmon · white fish · eggs · full-fat Greek yoghurt · whey","",checks.includes("prep-1"))}
+        ${chkRow("prep-2","Carbs","White rice · sweet potato · bananas · sourdough · frozen berries","",checks.includes("prep-2"))}
+        ${chkRow("prep-3","Extras","Veg for every main meal · electrolyte tabs or salt for training days","",checks.includes("prep-3"))}
+        ${chkRow("prep-4","Kitchen scale","Portions are in exact grams — a scale removes all guessing","",checks.includes("prep-4"))}
+        ${chkRow("prep-5","Baseline photos + waist measurement","Take them Sunday or Monday morning — you'll want them in week 12","",checks.includes("prep-5"))}
+      </div>
+      <div class="card">
+        <h2><span class="ic">👁</span>Preview</h2>
+        <div class="sub">Use the arrows above to browse any day of the program — day 1 is Monday 13 July.</div>
+      </div>`;
+    bindChecks(el);
     return;
   }
 
@@ -916,7 +932,7 @@ function renderPlan(){
     <div class="banner amber"><b>The one important caution</b>
     Peak week is a few days of smart carb/sodium timing — never near-zero water, diuretics or aggressive dehydration. The extreme version is where people get hurt, and it doesn't even look better. Feeling genuinely unwell = stop, drink, eat, done.</div>
 
-    <div class="proglabel" style="text-align:center;padding:18px 0 4px">Commenced Thu 9 July → event day Sat 3 October 2026 · built for one athlete, no fluff</div>
+    <div class="proglabel" style="text-align:center;padding:18px 0 4px">Mon 13 July → event day Sat 3 October 2026 · built for one athlete, no fluff</div>
   `;
 }
 
