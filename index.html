@@ -105,6 +105,7 @@
   .totals .cell{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:9px 6px;text-align:center}
   .totals .v{font-weight:800;font-size:15px;font-variant-numeric:tabular-nums}
   .totals .k{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--dim);margin-top:1px}
+  .totals .k.mck{text-transform:none;letter-spacing:0;font-variant-numeric:tabular-nums}
   .targetline{font-size:12px;color:var(--dim);margin-top:9px;line-height:1.5}
 
   .note{font-size:12.5px;color:var(--mut);margin-top:10px;line-height:1.5;border-top:1px solid var(--line);padding-top:10px}
@@ -448,14 +449,6 @@ function chkRow(id, title, sub, meta, checked, tag){
     </div>
   </div>`;
 }
-function totalsGrid(k,p,c,f){
-  return `<div class="totals">
-    <div class="cell"><div class="v">${k.toLocaleString()}</div><div class="k">kcal</div></div>
-    <div class="cell"><div class="v">${p}g</div><div class="k">Protein</div></div>
-    <div class="cell"><div class="v">${c}g</div><div class="k">Carbs</div></div>
-    <div class="cell"><div class="v">${f}g</div><div class="k">Fat</div></div>
-  </div>`;
-}
 function sessionCard(S, opts){
   opts = opts||{};
   const rows = S.ex ? S.ex.map(e=>`<tr><td>${e[0]}</td><td>${e[1]}</td></tr>`).join("") : "";
@@ -469,17 +462,46 @@ function sessionCard(S, opts){
     ${opts.details||""}
   </div>`;
 }
+let dayMeals = [];   // meals shown on the current day (feeds the live macro counter)
 function mealsCard(meals, checks, heading, footNote, showTotals, details){
+  dayMeals = showTotals ? meals : [];
   const rows = meals.map((m,i)=>chkRow("meal"+i, m[0], m[1],
     m[2]?`${Math.round(m[2])} kcal · ${Math.round(m[3])}g P · ${Math.round(m[4])}g C · ${Math.round(m[5])}g F`:"", checks.includes("meal"+i))).join("");
   const tot = meals.reduce((a,m)=>[a[0]+m[2],a[1]+m[3],a[2]+m[4],a[3]+m[5]],[0,0,0,0]);
+  const units = [" kcal","g P","g C","g F"];
+  const grid = showTotals ? `
+    <div class="totals" id="mcGrid">
+      ${units.map((u,i)=>`<div class="cell">
+        <div class="v mcv" data-mc="${i}">0</div>
+        <div class="k mck">/ ${Math.round(tot[i]).toLocaleString()}${u}</div>
+      </div>`).join("")}
+    </div>
+    <div class="targetline" id="mcRemain"></div>` : "";
   return `<div class="card">
     <h2><span class="ic">🍽</span>${heading}</h2>
     ${rows}
-    ${showTotals?totalsGrid(Math.round(tot[0]),Math.round(tot[1]),Math.round(tot[2]),Math.round(tot[3])):""}
+    ${grid}
     ${footNote?`<div class="targetline">${footNote}</div>`:""}
     ${details||""}
   </div>`;
+}
+/* live macro counter — ticked meals count as eaten; shows what's left for the day */
+function updateMacroCounter(){
+  const grid = document.getElementById("mcGrid");
+  if(!grid || !dayMeals.length) return;
+  const checks = getChecks(viewDate);
+  const eaten = dayMeals.reduce((a,m,i)=>checks.includes("meal"+i)?[a[0]+m[2],a[1]+m[3],a[2]+m[4],a[3]+m[5]]:a,[0,0,0,0]);
+  const tot = dayMeals.reduce((a,m)=>[a[0]+m[2],a[1]+m[3],a[2]+m[4],a[3]+m[5]],[0,0,0,0]);
+  grid.querySelectorAll("[data-mc]").forEach(n=>{
+    const i = +n.dataset.mc, v = Math.round(eaten[i]);
+    n.textContent = i===0 ? v.toLocaleString() : v+"g";
+    n.style.color = v>0 ? "var(--acc)" : "";
+  });
+  const left = tot.map((t,i)=>Math.max(0, Math.round(t)-Math.round(eaten[i])));
+  const done = dayMeals.every((_,i)=>checks.includes("meal"+i));
+  document.getElementById("mcRemain").innerHTML = done
+    ? `<b style="color:var(--acc)">All meals done for the day ✓</b>`
+    : `Left today: <b style="color:var(--text)">${left[0].toLocaleString()} kcal · ${left[1]}g P · ${left[2]}g C · ${left[3]}g F</b>`;
 }
 function weighCard(dt){
   const weights = getWeights();
@@ -612,7 +634,7 @@ function renderToday(){
     parts.push(`<div class="banner amber"><b>Safety line</b>If you feel genuinely unwell at any point — dizzy, disoriented, racing heart, severe cramping — stop the protocol, drink water normally and eat normally. One day is never worth your health.</div>`);
 
     el.innerHTML = parts.join("");
-    bindChecks(el); bindWeigh(el);
+    bindChecks(el); bindWeigh(el); updateMacroCounter();
     return;
   }
 
@@ -694,7 +716,7 @@ function renderToday(){
   parts.push(habitsCard(viewDate, checks, false));
 
   el.innerHTML = parts.join("");
-  bindChecks(el); bindWeigh(el);
+  bindChecks(el); bindWeigh(el); updateMacroCounter();
 }
 
 function bindChecks(root){
@@ -703,6 +725,7 @@ function bindChecks(root){
       const on = !n.classList.contains("on");
       n.classList.toggle("on",on);
       setCheck(viewDate, n.dataset.chk, on);
+      if(n.dataset.chk.startsWith("meal")) updateMacroCounter();
     });
   });
 }
