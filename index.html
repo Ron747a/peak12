@@ -181,6 +181,21 @@
   .phaseblock li::before{content:"·";position:absolute;left:2px;color:var(--acc);font-weight:800}
   .nowtag{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.06em;background:var(--acc);color:#0a0d12;padding:2px 7px;border-radius:6px;margin-left:7px;vertical-align:1px}
 
+  /* set logging */
+  .exrow{padding:10px 0;border-top:1px solid var(--line)}
+  .exrow:first-child{border-top:none;padding-top:4px}
+  .exhead{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+  .exname{font-weight:700;font-size:14.5px}
+  .extarget{color:var(--mut);font-size:13px;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .exlog{display:flex;align-items:center;gap:7px;margin-top:7px}
+  .exlog input{width:64px;background:var(--card2);border:1px solid var(--line);border-radius:9px;color:var(--text);
+    font-size:15px;font-weight:700;padding:7px 6px;text-align:center;font-variant-numeric:tabular-nums;-webkit-appearance:none;appearance:none}
+  .exlog input:focus{outline:none;border-color:var(--acc)}
+  .exlog .lx{color:var(--dim);font-size:12px;white-space:nowrap}
+  .lastref{flex:1;text-align:right;font-size:11.5px;color:var(--dim);line-height:1.3}
+  .lastref.beat{color:var(--acc);font-weight:700}
+  .lastref.dim{opacity:.7}
+
   .bigday{font-size:26px;font-weight:800;letter-spacing:-.01em}
   .countnum{font-size:44px;font-weight:800;color:var(--acc);line-height:1.1}
   .center{text-align:center;padding:26px 16px}
@@ -438,6 +453,67 @@ function saveWeight(dateIso, v){
   if(v==null) delete w[dateIso]; else w[dateIso]=v;
   localStorage.setItem("p12-weights", JSON.stringify(w));
 }
+/* lift logs: { "2026-07-13": { s:"Upper A", ex:{ "Chest Press":{w:80,r:8}, ... } }, ... } */
+function getLifts(){ try{ return JSON.parse(localStorage.getItem("p12-lifts")||"{}"); }catch(e){ return {}; } }
+function saveLiftEntry(dateIso, session, ex, w, r){
+  const L = getLifts();
+  if(w==null && r==null){
+    if(L[dateIso]){ delete L[dateIso].ex[ex]; if(!Object.keys(L[dateIso].ex).length) delete L[dateIso]; }
+  } else {
+    L[dateIso] = L[dateIso] || {s:session, ex:{}};
+    L[dateIso].s = session;
+    L[dateIso].ex[ex] = {w, r};
+  }
+  localStorage.setItem("p12-lifts", JSON.stringify(L));
+}
+function lastLift(session, ex, beforeIso){
+  const L = getLifts();
+  const base = s => (s||"").replace(" — Depletion","");
+  const dates = Object.keys(L).filter(d=>d<beforeIso).sort().reverse();
+  let any = null;
+  for(const d of dates){
+    const e = L[d];
+    if(!e.ex || !e.ex[ex]) continue;
+    if(base(e.s)===base(session)) return {...e.ex[ex], session:e.s, date:d, sameSession:true};
+    if(!any) any = {...e.ex[ex], session:e.s, date:d, sameSession:false};
+  }
+  return any;
+}
+function bindLifts(root){
+  const wrap = root.querySelector(".exlist");
+  if(!wrap) return;
+  const dateIso = iso(viewDate);
+  const sName = wrap.dataset.session;
+  const stored = getLifts()[dateIso];
+  wrap.querySelectorAll(".exrow").forEach(row=>{
+    const ex = row.dataset.ex;
+    const wIn = row.querySelector(".li-w"), rIn = row.querySelector(".li-r"), ref = row.querySelector(".lastref");
+    const cur = stored && stored.ex ? stored.ex[ex] : null;
+    if(cur){ if(cur.w!=null) wIn.value = cur.w; if(cur.r!=null) rIn.value = cur.r; }
+    const paint = ()=>{
+      const last = lastLift(sName, ex, dateIso);
+      if(!last){ ref.textContent = "first log"; ref.className = "lastref dim"; return; }
+      let txt = `Last: ${last.w!=null?last.w+"kg":"—"} × ${last.r!=null?last.r:"—"}`;
+      if(!last.sameSession) txt += ` (${last.session.replace(" — Depletion","")})`;
+      let cls = "lastref";
+      const nw = parseFloat(wIn.value), nr = parseInt(rIn.value);
+      if(last.sameSession && !isNaN(nw) && !isNaN(nr) && last.w!=null && last.r!=null){
+        if(nw>last.w || (nw===last.w && nr>last.r)){ txt += "  ▲ beat it"; cls += " beat"; }
+        else if(nw===last.w && nr===last.r){ txt += "  = matched"; }
+      }
+      ref.textContent = txt; ref.className = cls;
+    };
+    const save = ()=>{
+      const w = parseFloat(wIn.value), r = parseInt(rIn.value);
+      saveLiftEntry(dateIso, sName, ex, isNaN(w)?null:w, isNaN(r)?null:r);
+      paint();
+    };
+    wIn.addEventListener("change", save);
+    rIn.addEventListener("change", save);
+    [wIn,rIn].forEach(i=>i.addEventListener("keydown", e=>{ if(e.key==="Enter") i.blur(); }));
+    paint();
+  });
+}
 
 /* ============ RENDER HELPERS ============ */
 function chkRow(id, title, sub, meta, checked, tag){
@@ -452,12 +528,27 @@ function chkRow(id, title, sub, meta, checked, tag){
 }
 function sessionCard(S, opts){
   opts = opts||{};
-  const rows = S.ex ? S.ex.map(e=>`<tr><td>${e[0]}</td><td>${e[1]}</td></tr>`).join("") : "";
+  let body = "";
+  if(S.ex && opts.log){
+    body = `<div class="exlist" data-session="${S.name}" style="margin-top:6px">` + S.ex.map(([e,s])=>`
+      <div class="exrow" data-ex="${e}">
+        <div class="exhead"><span class="exname">${e}</span><span class="extarget">${s}</span></div>
+        <div class="exlog">
+          <input class="li-w" type="number" inputmode="decimal" step="0.5" min="0" max="500" placeholder="kg">
+          <span class="lx">kg ×</span>
+          <input class="li-r" type="number" inputmode="numeric" step="1" min="0" max="100" placeholder="reps">
+          <span class="lastref"></span>
+        </div>
+      </div>`).join("") + `</div>`;
+  } else if(S.ex){
+    const rows = S.ex.map(e=>`<tr><td>${e[0]}</td><td>${e[1]}</td></tr>`).join("");
+    body = `<table style="margin-top:10px"><tr><th>Exercise</th><th>Sets × Reps</th></tr>${rows}</table>`;
+  }
   return `<div class="card">
     <h2><span class="ic">🏋️</span>Today's session</h2>
     <h3>${S.name}${opts.tag?`<span class="tag" style="color:var(--amber);border-color:rgba(251,191,36,.4)">${opts.tag}</span>`:""}</h3>
     <div class="sub">${S.focus}</div>
-    ${S.ex?`<table style="margin-top:10px"><tr><th>Exercise</th><th>Sets × Reps</th></tr>${rows}</table>`:""}
+    ${body}
     ${S.note?`<div class="note">${S.note}</div>`:""}
     ${opts.extraNote||""}
     ${opts.details||""}
@@ -624,7 +715,7 @@ function renderToday(){
       ? `<div class="banner green"><b>🏁 EVENT DAY</b>${E.banner}</div>`
       : `<div class="banner red"><b>Event week — ${E.d} · ${E.tag}</b>${E.banner}</div>`);
 
-    parts.push(sessionCard(E.session));
+    parts.push(sessionCard(E.session, {log: ei<=2}));
 
     if(E.cardio){
       parts.push(`<div class="card"><h2><span class="ic">🏃</span>Cardio</h2>
@@ -650,7 +741,7 @@ function renderToday(){
     parts.push(`<div class="banner amber"><b>Safety line</b>If you feel genuinely unwell at any point — dizzy, disoriented, racing heart, severe cramping — stop the protocol, drink water normally and eat normally. One day is never worth your health.</div>`);
 
     el.innerHTML = parts.join("");
-    bindChecks(el); bindWeigh(el); updateMacroCounter();
+    bindChecks(el); bindWeigh(el); bindLifts(el); updateMacroCounter();
     return;
   }
 
@@ -672,6 +763,7 @@ function renderToday(){
         })}
       : SESSIONS[dow];
     parts.push(sessionCard(S, {
+      log: true,
       tag: isDeload ? "Deload" : "",
       extraNote: isDeload ? `<div class="note" style="color:#fde68a">Sets already reduced for the deload — run everything at ~70% of your usual weights, well short of failure.</div>` : "",
       details: `<details><summary>Effort, rests & progression</summary><div class="inner"><ul>
@@ -732,7 +824,7 @@ function renderToday(){
   parts.push(habitsCard(viewDate, checks, false));
 
   el.innerHTML = parts.join("");
-  bindChecks(el); bindWeigh(el); updateMacroCounter();
+  bindChecks(el); bindWeigh(el); bindLifts(el); updateMacroCounter();
 }
 
 function bindChecks(root){
@@ -758,6 +850,67 @@ function bindWeigh(root){
   inp.addEventListener("keydown", e=>{ if(e.key==="Enter"){ inp.blur(); save(); } });
 }
 
+/* ============ BACKUP / RESTORE ============ */
+function buildBackupPayload(){
+  const data = {};
+  Object.keys(localStorage).filter(k=>k.startsWith("p12-")).forEach(k=>data[k]=localStorage.getItem(k));
+  return JSON.stringify({app:"PEAK/12", version:1, exported:new Date().toISOString(), data}, null, 1);
+}
+async function exportBackup(){
+  const payload = buildBackupPayload();
+  const fname = `peak12-backup-${iso(new Date())}.json`;
+  const blob = new Blob([payload], {type:"application/json"});
+  let ok = false;
+  const file = new File([blob], fname, {type:"application/json"});
+  if(navigator.canShare && navigator.canShare({files:[file]})){
+    try{ await navigator.share({files:[file], title:"PEAK/12 backup"}); ok = true; }
+    catch(e){ ok = false; /* user cancelled the share sheet */ }
+  } else {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = fname;
+    document.body.appendChild(a); a.click(); a.remove();
+    ok = true;
+  }
+  if(ok){ localStorage.setItem("p12-lastbackup", iso(new Date())); renderWeight(); }
+}
+function restoreBackup(text){
+  let obj;
+  try{ obj = JSON.parse(text); }catch(e){ alert("That file isn't a valid backup."); return; }
+  if(!obj || obj.app!=="PEAK/12" || !obj.data){ alert("That file isn't a PEAK/12 backup."); return; }
+  const when = obj.exported ? new Date(obj.exported).toLocaleString() : "unknown date";
+  if(!confirm(`Restore backup from ${when}?\n\nThis replaces everything currently in the app (weigh-ins, ticks, lift logs).`)) return;
+  Object.keys(localStorage).filter(k=>k.startsWith("p12-")).forEach(k=>localStorage.removeItem(k));
+  Object.entries(obj.data).forEach(([k,v])=>{ if(k.startsWith("p12-")) localStorage.setItem(k, v); });
+  alert("Backup restored.");
+  location.reload();
+}
+function backupCardHtml(){
+  const lastB = localStorage.getItem("p12-lastbackup");
+  return `<div class="card">
+    <h2><span class="ic">🗄</span>Backup</h2>
+    <div class="sub">Everything — weigh-ins, ticks, lift logs — lives on this phone only. Export a backup file every week or two; Restore brings it all back (or moves it to a new phone).</div>
+    <div class="winput" style="margin-top:12px">
+      <button id="bkExport" style="flex:1;max-width:none">Export backup</button>
+      <button id="bkImport" style="flex:1;max-width:none;background:var(--card2);color:var(--text);border:1px solid var(--line)">Restore</button>
+    </div>
+    <input type="file" id="bkFile" accept="application/json,.json" style="display:none">
+    <div class="targetline">${lastB?`Last backup: ${fmtShort(fromIso(lastB))}`:"No backup yet."}</div>
+  </div>`;
+}
+function bindBackup(root){
+  const ex = root.querySelector("#bkExport"), im = root.querySelector("#bkImport"), f = root.querySelector("#bkFile");
+  if(!ex) return;
+  ex.addEventListener("click", exportBackup);
+  im.addEventListener("click", ()=>f.click());
+  f.addEventListener("change", e=>{
+    const file = e.target.files[0]; if(!file) return;
+    const rd = new FileReader();
+    rd.onload = ()=>restoreBackup(rd.result);
+    rd.readAsText(file);
+    e.target.value = "";
+  });
+}
+
 /* ============ WEIGHT VIEW ============ */
 function renderWeight(){
   const el = document.getElementById("weightView");
@@ -768,7 +921,8 @@ function renderWeight(){
     el.innerHTML = `<div class="card">
       <h2><span class="ic">↘</span>Weight log</h2>
       <div class="empty">No entries yet.<br><br>Log your morning weigh-in at the top of the Today tab — every entry lands here automatically.</div>
-    </div>`;
+    </div>` + backupCardHtml();
+    bindBackup(el);
     return;
   }
 
@@ -830,8 +984,9 @@ function renderWeight(){
     <div class="card">
       <h2><span class="ic">🗓</span>All entries</h2>
       ${list}
-    </div>`;
+    </div>` + backupCardHtml();
 
+  bindBackup(el);
   el.querySelectorAll("[data-del]").forEach(b=>{
     b.addEventListener("click",()=>{
       const d = b.dataset.del;
